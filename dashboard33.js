@@ -1,3 +1,19 @@
+
+window.showToast = function(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return showToast(message, 'info'); // fallback
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+    toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+};
+
 // dashboard.js
 let mainMap, hotspotMap, modalMap;
 let allMarkersGroup, highRiskGroup, verifiedGroup;
@@ -97,7 +113,7 @@ async function checkDashboardAuth() {
 
         const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
         if (sessionError || !session) {
-            alert('Please log in to access the dashboard.');
+            showToast('Please log in to access the dashboard.', 'info');
             window.location.href = 'auth.html';
             return null;
         }
@@ -114,7 +130,7 @@ async function checkDashboardAuth() {
         }
 
         if (!user.role || user.role !== 'gov_portal') {
-            alert('Unauthorized access. Government portal role required.');
+            showToast('Unauthorized access. Government portal role required.', 'info');
             window.location.href = 'auth.html';
             return null;
         }
@@ -123,7 +139,7 @@ async function checkDashboardAuth() {
         return user;
     } catch (error) {
         console.error('Authentication error:', error);
-        alert('Authentication error. Please log in again.');
+        showToast('Authentication error. Please log in again.', 'error');
         window.location.href = 'auth.html';
         return null;
     }
@@ -148,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         setInterval(updateCurrentTime, 1000);
     } catch (error) {
         console.error('Dashboard initialization error:', error);
-        alert('Failed to initialize dashboard: ' + error.message);
+        showToast('Failed to initialize dashboard: ' + error.message, 'error');
         document.getElementById('dashboardLoading').style.display = 'none';
     }
 });
@@ -470,7 +486,7 @@ async function fetchReports() {
 
         if (error) {
             console.error('Error fetching reports:', error);
-            alert('Failed to load reports: ' + error.message);
+            showToast('Failed to load reports: ' + error.message, 'error');
             return;
         }
 
@@ -517,7 +533,7 @@ async function fetchReports() {
             });
     } catch (error) {
         console.error('Unexpected error fetching reports:', error);
-        alert('An unexpected error occurred while loading reports: ' + error.message);
+        showToast('An unexpected error occurred while loading reports: ' + error.message, 'error');
     }
 }
 
@@ -531,7 +547,7 @@ async function fetchAlerts() {
 
         if (error) {
             console.error('Error fetching alerts:', error);
-            alert('Failed to load alerts: ' + error.message);
+            showToast('Failed to load alerts: ' + error.message, 'error');
             return;
         }
 
@@ -556,7 +572,7 @@ async function fetchAlerts() {
             });
     } catch (error) {
         console.error('Error fetching alerts:', error);
-        alert('Failed to load alerts: ' + error.message);
+        showToast('Failed to load alerts: ' + error.message, 'error');
     }
 }
 
@@ -595,7 +611,7 @@ async function createNewAlert() {
     const sendFCMEl = document.getElementById('sendFCM');
 
     if (!titleEl || !descriptionEl || !severityEl || !sendFCMEl) {
-        alert('Form elements not found. Please refresh the page and try again.');
+        showToast('Form elements not found. Please refresh the page and try again.', 'info');
         return;
     }
 
@@ -606,7 +622,7 @@ async function createNewAlert() {
     const sendFCM = sendFCMEl.checked;
 
     if (!title || !description || !severity) {
-        alert('Please fill all required fields.');
+        showToast('Please fill all required fields.', 'info');
         return;
     }
 
@@ -646,13 +662,13 @@ async function createNewAlert() {
             }
         }
 
-        alert('Alert created successfully!');
+        showToast('Alert created successfully!', 'success');
         closeModal('newAlertModal');
         document.getElementById('newAlertForm').reset();
         await fetchAlerts();
     } catch (error) {
         console.error('Error creating alert:', error);
-        alert('Failed to create alert: ' + error.message);
+        showToast('Failed to create alert: ' + error.message, 'error');
     }
 }
 
@@ -718,9 +734,9 @@ function viewAlert(alertId) {
             Issued: ${formatTimestamp(alertItem.created_at)}
             Status: ${alertItem.sent_via_fcm ? 'Sent' : 'Pending'}
         `;
-        alert(message.replace(/\n/g, '\n'));
+        showToast(message.replace(/\n/g, '\n', 'info'));
     } else {
-        alert('Alert not found.');
+        showToast('Alert not found.', 'info');
     }
 }
 
@@ -735,11 +751,11 @@ async function deleteAlert(alertId) {
 
         if (error) throw error;
         logAuditAction('delete_alert', alertId, { deleted: true });
-        alert('Alert deleted successfully.');
+        showToast('Alert deleted successfully.', 'success');
         await fetchAlerts();
     } catch (error) {
         console.error('Error deleting alert:', error);
-        alert('Failed to delete alert: ' + error.message);
+        showToast('Failed to delete alert: ' + error.message, 'error');
     }
 }
 
@@ -752,12 +768,12 @@ async function verifyReport(reportId) {
 
         if (error) throw error;
         logAuditAction('verify_report', reportId, { new_status: 'verified' });
-        alert('Report verified successfully.');
+        showToast('Report verified successfully.', 'success');
         await fetchReports();
         closeModal('reportModal');
     } catch (error) {
         console.error('Verification error:', error);
-        alert('Failed to verify report: ' + error.message);
+        showToast('Failed to verify report: ' + error.message, 'error');
     }
 };
 
@@ -770,12 +786,12 @@ async function rejectReport(reportId) {
 
         if (error) throw error;
         logAuditAction('reject_report', reportId, { new_status: 'rejected' });
-        alert('Report rejected successfully.');
+        showToast('Report rejected successfully.', 'success');
         await fetchReports();
         closeModal('reportModal');
     } catch (error) {
         console.error('Rejection error:', error);
-        alert('Failed to reject report: ' + error.message);
+        showToast('Failed to reject report: ' + error.message, 'error');
     }
 };
 
@@ -1091,7 +1107,7 @@ function initializeMaps() {
         setTimeout(() => mainMap.invalidateSize(), 100);
     } catch (error) {
         console.error('Failed to initialize map:', error);
-        alert('Failed to initialize map: ' + error.message);
+        showToast('Failed to initialize map: ' + error.message, 'error');
     }
 }
 
@@ -1117,7 +1133,7 @@ function initializeHotspotMap() {
         hotspotMap = L.map('hotspot-map', {
             preferCanvas: true,
             renderer: L.canvas({ padding: 0.5, willReadFrequently: true })
-        }).setView(center, 10);
+        }).setView(center, 5);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
@@ -1196,7 +1212,7 @@ function initializeHotspotMap() {
         setTimeout(() => hotspotMap.invalidateSize(), 100);
     } catch (error) {
         console.error('Failed to initialize hotspot map:', error);
-        alert('Failed to initialize hotspot map: ' + error.message);
+        if (typeof showToast === 'function') showToast('Failed to initialize hotspot map', 'error');
     }
 }
 
@@ -1271,7 +1287,7 @@ function updateHeatmap() {
         hotspotMap.invalidateSize();
     } catch (error) {
         console.error('Error updating heatmap:', error);
-        alert('Failed to update heatmap: ' + error.message);
+        if (typeof showToast === 'function') showToast('Failed to update heatmap', 'error');
     }
 }
 
@@ -1503,7 +1519,7 @@ function filterReports(filterType) {
 async function viewReport(reportId) {
     const report = reports.find(r => r.id === reportId);
     if (!report) {
-        alert('Report not found.');
+        showToast('Report not found.', 'info');
         return;
     }
 
@@ -1517,7 +1533,7 @@ async function viewReport(reportId) {
 
     if (!modal || !modalTitle || !modalDetails || !modalDescription || !modalMediaBadges || !modalMediaContent || !modalFooter) {
         console.error('Modal elements not found');
-        alert('Modal elements not found.');
+        showToast('Modal elements not found.', 'info');
         return;
     }
 
@@ -1722,7 +1738,7 @@ function initCharts() {
         updateCharts();
     } catch (error) {
         console.error('Error initializing charts:', error);
-        alert('Failed to initialize charts: ' + error.message);
+        showToast('Failed to initialize charts: ' + error.message, 'error');
     }
 }
 
@@ -1798,7 +1814,7 @@ function updateCharts() {
         }
     } catch (error) {
         console.error('Error updating charts:', error);
-        alert('Failed to update charts: ' + error.message);
+        showToast('Failed to update charts: ' + error.message, 'error');
     }
 }
 
@@ -1895,11 +1911,11 @@ function setupEventListeners() {
 
                 if (error) throw error;
                 await supabaseClient.auth.updateUser({ email });
-                alert('Profile updated successfully.');
+                showToast('Profile updated successfully.', 'success');
                 await fetchUserMetadata();
             } catch (error) {
                 console.error('Error updating profile:', error);
-                alert('Failed to update profile: ' + error.message);
+                showToast('Failed to update profile: ' + error.message, 'error');
             }
         });
     }
@@ -1978,7 +1994,7 @@ function refreshData() {
             await Promise.all([fetchReports(), fetchAlerts()]);
             refreshBtn.disabled = false;
             refreshIcon.classList.remove('fa-spin');
-            alert('Data refreshed successfully.');
+            showToast('Data refreshed successfully.', 'success');
         }, 1000);
     }
 }
@@ -1992,6 +2008,6 @@ async function logout() {
         window.location.href = 'auth.html';
     } catch (error) {
         console.error('Logout error:', error);
-        alert('Failed to log out: ' + error.message);
+        showToast('Failed to log out: ' + error.message, 'error');
     }
 }

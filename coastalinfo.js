@@ -1,3 +1,19 @@
+
+window.showToast = function(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return showToast(message, 'info'); // fallback
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+    toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+};
+
 // coastalinfo.js - Small Vessel Advisory Service (SVAS)
 let coastalMap;
 let coastalGeoJsonLayer;
@@ -115,7 +131,7 @@ function initializeCoastalMap() {
     } catch (error) {
         console.error('Failed to initialize coastal map:', error);
         showLoadingIndicator(false);
-        alert('Failed to initialize coastal map: ' + error.message);
+        showToast('Failed to initialize coastal map: ' + error.message, 'error');
     }
 }
 
@@ -223,7 +239,7 @@ async function fetchAndProcessCoastalData() {
         }
     } catch (error) {
         console.error('Error fetching coastal data:', error);
-        alert('Failed to load coastal data: ' + error.message);
+        showToast('Failed to load coastal data: ' + error.message, 'error');
     } finally {
         showLoadingIndicator(false);
     }
@@ -573,7 +589,7 @@ function initializeVesselMap() {
 
     } catch (error) {
         console.error('Failed to initialize vessel map:', error);
-        alert('Failed to initialize vessel map: ' + error.message);
+        showToast('Failed to initialize vessel map: ' + error.message, 'error');
     }
 }
 
@@ -890,10 +906,10 @@ function setupVesselMapEventListeners() {
                 plotUserLocation(ulati, ulng);
             }, error => {
                 console.error('Error retrieving location:', error);
-                alert('Unable to retrieve your location. Please check your device settings.');
+                showToast('Unable to retrieve your location. Please check your device settings.', 'info');
             });
         } else {
-            alert('Geolocation is not supported by this browser.');
+            showToast('Geolocation is not supported by this browser.', 'info');
         }
     });
 

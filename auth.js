@@ -1,3 +1,19 @@
+
+window.showToast = function(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return showToast(message, 'info'); // fallback
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : (type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle');
+    toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     const { createClient } = window.supabase;
     const supabaseUrl = 'https://mnejfugdushmrwzocxlx.supabase.co';
@@ -28,7 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const departmentNameInput = formId === 'registerForm' ? this.querySelector('input[name="departmentName"]') : null;
 
             if (!emailOrPhoneInput || !passwordInput || !stateSelect || (formId === 'registerForm' && !departmentNameInput)) {
-                alert('Form fields are missing. Please check the form structure.');
+                showToast('Form fields are missing. Please check the form structure.', 'info');
                 button.innerHTML = originalText;
                 button.disabled = false;
                 return;
@@ -40,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const departmentName = departmentNameInput ? departmentNameInput.value.trim() : null;
 
             if (!email || !password || !state || (formId === 'registerForm' && !departmentName)) {
-                alert('Please fill all required fields.');
+                showToast('Please fill all required fields.', 'info');
                 button.innerHTML = originalText;
                 button.disabled = false;
                 return;
@@ -91,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         throw new Error('Dashboard page not found. Please contact support.');
                     }
 
-                    alert('Login successful! Redirecting to dashboard...');
+                    showToast('Login successful! Redirecting to dashboard...', 'success');
                     window.location.href = '/dashboard';
                 } else {
                     // Supabase Auth natively rejects duplicate emails — no pre-check needed
@@ -132,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Non-fatal: admin can set role manually in Supabase dashboard
                         }
 
-                        alert('Registration successful! Please check your email for verification, then log in.');
+                        showToast('Registration successful! Please check your email for verification, then log in.', 'success');
                         form.reset();
                     } else {
                         throw new Error('No user returned from signup.');
@@ -146,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (error.message.includes('Email not confirmed')) {
                     errorMessage = 'Please verify your email before logging in.';
                 }
-                alert(`Error: ${errorMessage}`);
+                showToast(`Error: ${errorMessage}`, 'error');
             } finally {
                 button.innerHTML = originalText;
                 button.disabled = false;

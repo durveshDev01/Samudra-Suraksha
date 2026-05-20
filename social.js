@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sourceFilter.innerHTML = `
             <option value="all">All Sources</option>
             <option value="twitter">Twitter</option>
+            <option value="news">News & RSS</option>
         `;
         searchInput.parentElement.appendChild(sourceFilter);
     }
@@ -80,7 +81,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const markers = L.markerClusterGroup();
     socialMap.addLayer(markers);
 
-    // ── Initialize Charts ───────────────────────────────────────────────
+    const chartOptionsBase = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { font: { size: 11 } } } }
+    };
+
     const tweetVolumeChart = new Chart(tweetVolumeChartCanvas, {
         type: 'line',
         data: {
@@ -93,7 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 tension: 0.4, fill: true, pointRadius: 3
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        options: {
+            ...chartOptionsBase,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
     });
 
     const categoryChart = new Chart(sentimentChartCanvas, {
@@ -105,7 +115,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: ['#ef4444','#3b82f6','#f59e0b','#10b981','#6b7280']
             }]
         },
-        options: { responsive: true, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } } }
+        options: {
+            ...chartOptionsBase,
+            plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
     });
 
     const hazardDistributionChart = new Chart(hazardDistributionChartCanvas, {
@@ -118,15 +131,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 backgroundColor: ['#3b82f6','#8b5cf6','#06b6d4','#f59e0b','#ef4444','#6b7280']
             }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        options: {
+            ...chartOptionsBase,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
     });
+
+    function resizeSocialCharts() {
+        [tweetVolumeChart, categoryChart, hazardDistributionChart].forEach(ch => {
+            if (ch) ch.resize();
+        });
+    }
 
     const observer = new MutationObserver(() => {
         if (!socialTab.classList.contains('hidden')) {
             setTimeout(() => {
                 socialMap.invalidateSize();
+                resizeSocialCharts();
                 console.log('social.js: Invalidated map size on tab visibility change');
-            }, 100);
+            }, 150);
         }
     });
     observer.observe(socialTab, { attributes: true, attributeFilter: ['class'] });
@@ -308,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         applyFilters();
                         updateAnalytics();
                         updateMap(tweetsData);
+                        resizeSocialCharts();
                         loadingSpinner.classList.add('hidden');
                         return;
                     } else if (resultData.status === 'done' && tweets.length === 0) {
@@ -346,6 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let processedTweets = [];
 
         for (const t of rawTweets) {
+            if ((t.source || '').toLowerCase() === 'reddit') continue;
             // ── Normalize field names from RSS backend ──────────────────
             const hazard   = t.hazard_type || t.hazard || detectHazard(t.content || '');
             const urgency  = t.urgency  || determineUrgency(t.category || '', hazard);
@@ -356,8 +382,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const normalized = {
                 ...t,
+                id: t.id || `post-${processedTweets.length}`,
                 hazard,
                 urgency,
+                relevance_score: t.relevance_score,
                 category:     t.category     || 'Observation/Neutral Report',
                 confidence:   t.confidence   || 0.75,
                 misinfo_flag: t.misinfo_flag  || false,
@@ -381,11 +409,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
 
+            if (!normalized.id) normalized.id = `post-${processedTweets.length}-${Date.now()}`;
             processedTweets.push(normalized);
         }
 
-        tweetsData = processedTweets;
-        displayTweets(processedTweets);
+        tweetsData = sortByRecency(processedTweets);
+        displayTweets(tweetsData);
         console.log(`social.js: Displayed ${processedTweets.length} normalized posts (already Gemini-analyzed by backend)`);
         return processedTweets;
     }
@@ -490,6 +519,58 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'low';
     }
 
+    /** Severity level for map color: critical → safe */
+    function getSeverityLevel(tweet) {
+        if (tweet.misinfo_flag && tweet.urgency === 'high') return 'critical';
+        if (tweet.urgency === 'high' || (tweet.category || '').includes('Emergency')) return 'critical';
+        if (tweet.urgency === 'medium' || (tweet.category || '').includes('Panic')) return 'high';
+        if (tweet.urgency === 'low' && tweet.sentiment === 'positive') return 'safe';
+        if (tweet.urgency === 'medium') return 'medium';
+        return 'low';
+    }
+
+    const SEVERITY_COLORS = {
+        critical: '#dc2626',
+        high: '#ea580c',
+        medium: '#ca8a04',
+        low: '#65a30d',
+        safe: '#22c55e'
+    };
+
+    function getSeverityColor(tweet) {
+        return SEVERITY_COLORS[getSeverityLevel(tweet)] || SEVERITY_COLORS.low;
+    }
+
+    function getPostTimestamp(tweet) {
+        const raw = tweet.metadata?.created_at || tweet.created_at;
+        if (!raw) return null;
+        const d = new Date(raw);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function isLatestPost(tweet, allTweets, maxAgeHours = 24) {
+        const d = getPostTimestamp(tweet);
+        if (!d) return false;
+        const ageH = (Date.now() - d.getTime()) / (1000 * 60 * 60);
+        if (ageH > maxAgeHours) return false;
+        const sorted = [...allTweets].sort((a, b) => {
+            const ta = getPostTimestamp(a)?.getTime() || 0;
+            const tb = getPostTimestamp(b)?.getTime() || 0;
+            return tb - ta;
+        });
+        const topN = Math.min(3, sorted.length);
+        return sorted.slice(0, topN).some(t => t.id === tweet.id || t.content === tweet.content);
+    }
+
+    function sortByRecency(tweets) {
+        return [...tweets].sort((a, b) => {
+            const ta = getPostTimestamp(a)?.getTime() || 0;
+            const tb = getPostTimestamp(b)?.getTime() || 0;
+            if (tb !== ta) return tb - ta;
+            return (b.relevance_score || 0) - (a.relevance_score || 0);
+        });
+    }
+
     function extractLocation(tweet, extracted = null) {
         const regions = Object.keys(indianLocations);
         let content = (tweet.content || '').toUpperCase();
@@ -537,15 +618,16 @@ document.addEventListener('DOMContentLoaded', () => {
                    (category === 'all' || tweet.category.toLowerCase().includes(category.toLowerCase().replace('_', ' '))) &&
                    (region === 'all' || tweet.location.region === region) &&
                    (urgency === 'all' || tweet.urgency === urgency) &&
-                   (source === 'all' || tweet.source === 'twitter') &&
+                   (source === 'all' || (tweet.source || '').includes(source)) &&
                    (dateRange === 'all' ||
                     (dateRange === '24h' && timeDiff <= 24) ||
                     (dateRange === '7d' && timeDiff <= 168) ||
                     (dateRange === '30d' && timeDiff <= 720));
         });
 
-        displayTweets(filteredTweets);
-        updateMap(filteredTweets);
+        const sorted = sortByRecency(filteredTweets);
+        displayTweets(sorted);
+        updateMap(sorted);
         updateAnalytics();
     }
 
@@ -579,14 +661,23 @@ document.addEventListener('DOMContentLoaded', () => {
         hazardDistributionChart.update();
 
         const hashtagCounts = {};
-        tweetsData.flatMap(tweet => tweet.hashtags).forEach(tag => {
-            const cleanTag = tag.toLowerCase();
-            hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 1;
+        const stopWords = new Set(['the', 'and', 'to', 'in', 'of', 'for', 'on', 'with', 'at', 'is', 'india', 'this', 'that', 'from', 'have', 'were', 'been', 'will', 'what', 'when', 'which']);
+        tweetsData.forEach(tweet => {
+            (tweet.hashtags || []).forEach(tag => {
+                const cleanTag = tag.toLowerCase().replace('#', '');
+                hashtagCounts[cleanTag] = (hashtagCounts[cleanTag] || 0) + 2;
+            });
+            const words = (tweet.content || '').toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+            words.forEach(word => {
+                if (!stopWords.has(word)) {
+                    hashtagCounts[word] = (hashtagCounts[word] || 0) + 0.5;
+                }
+            });
         });
         const trending = Object.entries(hashtagCounts)
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([tag, count]) => `<span class="inline-block bg-blue-100 rounded-full px-3 py-1 text-sm font-semibold text-blue-700 mr-2 mb-2">#${tag.slice(1)}: ${count}</span>`)
+            .slice(0, 8)
+            .map(([tag, count]) => `<span class="inline-block bg-blue-100 rounded-full px-3 py-1 text-sm font-semibold text-blue-700 mr-2 mb-2">#${tag}</span>`)
             .join('');
 
         const misinfoCount = tweetsData.filter(tweet => tweet.misinfo_flag).length;
@@ -597,36 +688,57 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateMap(tweets) {
         markers.clearLayers();
         let hasMarkers = false;
-        tweets.forEach(tweet => {
-            if (tweet.location.coordinates && Array.isArray(tweet.location.coordinates) && tweet.location.coordinates.length === 2) {
-                const [lat, lng] = tweet.location.coordinates;
-                const markerClass = `marker-${tweet.hazard}`;
-                const marker = L.divIcon({
-                    className: `custom-marker ${markerClass}`,
-                    html: `<div>${tweet.hazard.charAt(0).toUpperCase()}${tweet.misinfo_flag ? '⚠️' : ''}</div>`,
-                    iconSize: [28, 28]
-                });
-                const popupContent = `
-                    <div class="p-2 max-w-xs">
-                        <p class="font-semibold">${tweet.metadata?.username || 'Unknown User'}</p>
-                        <p class="text-sm text-gray-700">${tweet.content.substring(0, 100)}...</p>
-                        <p class="text-xs text-gray-500">Category: <span class="px-2 py-1 rounded-full ${getCategoryBadgeClass(tweet.category)}">${tweet.category} (${(tweet.categoryScore * 100).toFixed(1)}%)</span></p>
-                        <p class="text-xs text-gray-500">Hazard: ${tweet.hazard}</p>
-                        <p class="text-xs text-gray-500">Urgency: <span class="px-2 py-1 rounded-full ${tweet.urgency === 'high' ? 'bg-red-500 text-white' : tweet.urgency === 'medium' ? 'bg-yellow-500 text-white' : 'bg-green-500 text-white'}">${tweet.urgency}</span></p>
-                        <p class="text-xs text-gray-500">Region: ${tweet.location.region}</p>
-                        ${tweet.misinfo_flag ? `<p class="text-xs text-red-500 mt-1">⚠️ Potential Misinfo: ${tweet.misinfo_reason}</p>` : ''}
-                        <p class="text-xs text-gray-500 mt-1">Hashtags: ${tweet.hashtags.join(', ')}</p>
-                    </div>
-                `;
-                L.marker([lat, lng], { icon: marker }).bindPopup(popupContent).addTo(markers);
-                hasMarkers = true;
+        let latestMarker = null;
+        const sorted = sortByRecency(tweets);
+
+        sorted.forEach(tweet => {
+            if (!tweet.location?.coordinates || !Array.isArray(tweet.location.coordinates) || tweet.location.coordinates.length !== 2) {
+                return;
             }
+            const [lat, lng] = tweet.location.coordinates;
+            const severity = getSeverityLevel(tweet);
+            const color = getSeverityColor(tweet);
+            const isLatest = isLatestPost(tweet, sorted);
+            const size = isLatest ? 36 : (severity === 'critical' ? 32 : 28);
+            const pulseClass = isLatest ? ' marker-latest-pulse' : '';
+            const letter = (tweet.hazard || 'o').charAt(0).toUpperCase();
+
+            const marker = L.divIcon({
+                className: `custom-marker severity-${severity}${pulseClass}`,
+                html: `<div style="background-color:${color};width:${size}px;height:${size}px;border-radius:50%;border:2px solid ${isLatest ? '#1e3a8a' : '#fff'};box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${isLatest ? 13 : 11}px;">${letter}${tweet.misinfo_flag ? '!' : ''}</div>`,
+                iconSize: [size, size],
+                iconAnchor: [size / 2, size / 2]
+            });
+
+            const relTime = timeAgo(tweet.metadata?.created_at || tweet.created_at);
+            const popupContent = `
+                <div class="p-2 max-w-xs">
+                    ${isLatest ? '<p class="text-xs font-bold text-blue-700 mb-1">🆕 LATEST ALERT</p>' : ''}
+                    <p class="font-semibold">${tweet.metadata?.username || tweet.username || 'Unknown'}</p>
+                    <p class="text-sm text-gray-700">${(tweet.content || '').substring(0, 120)}…</p>
+                    <p class="text-xs text-gray-500">Posted: ${relTime || 'recent'}</p>
+                    <p class="text-xs text-gray-500">Severity: <span style="color:${color};font-weight:700">${severity.toUpperCase()}</span></p>
+                    <p class="text-xs text-gray-500">Hazard: ${tweet.hazard} · Urgency: ${tweet.urgency}</p>
+                    <p class="text-xs text-gray-500">Region: ${tweet.location.region}</p>
+                    ${tweet.relevance_score ? `<p class="text-xs text-gray-500">Relevance: ${Math.round(tweet.relevance_score * 10) / 10}</p>` : ''}
+                    ${tweet.misinfo_flag ? `<p class="text-xs text-red-500 mt-1">⚠️ ${tweet.misinfo_reason || 'Potential misinformation'}</p>` : ''}
+                </div>
+            `;
+            const m = L.marker([lat, lng], { icon: marker, zIndexOffset: isLatest ? 1000 : severity === 'critical' ? 500 : 0 })
+                .bindPopup(popupContent)
+                .addTo(markers);
+            if (isLatest && !latestMarker) latestMarker = m;
+            hasMarkers = true;
         });
+
         if (hasMarkers) {
-            socialMap.fitBounds(markers.getBounds(), { padding: [20, 20] });
+            socialMap.fitBounds(markers.getBounds(), { padding: [30, 30] });
+            if (latestMarker) {
+                setTimeout(() => latestMarker.openPopup(), 400);
+            }
         }
         socialMap.invalidateSize();
-        console.log('social.js: Updated map with', tweets.length, 'tweets');
+        console.log('social.js: Updated map with', tweets.length, 'posts (severity-colored)');
     }
 
     function getCategoryBadgeClass(category) {
@@ -635,6 +747,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (category.includes('Awareness') || category.includes('Official')) return 'bg-green-500 text-white';
         if (category.includes('Observation') || category.includes('Report')) return 'bg-blue-500 text-white';
         return 'bg-gray-500 text-white';
+    }
+
+    function timeAgo(dateStr) {
+        if (!dateStr) return '';
+        const now = new Date();
+        const d = new Date(dateStr);
+        const diff = Math.floor((now - d) / 1000);
+        if (diff < 60) return 'just now';
+        if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+        if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+        if (diff < 604800) return `${Math.floor(diff/86400)}d ago`;
+        return `${Math.floor(diff/604800)}w ago`;
     }
 
     function displayTweets(tweets, append = false) {
@@ -646,14 +770,21 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const tweetHTML = tweets.map((tweet) => {
+        const sortedDisplay = sortByRecency(tweets);
+        const tweetHTML = sortedDisplay.map((tweet, index) => {
             const username  = tweet.metadata?.username || tweet.username || 'News Source';
+            const isLatest = isLatestPost(tweet, sortedDisplay) || index === 0;
+            const severity = getSeverityLevel(tweet);
+            const borderColor = getSeverityColor(tweet);
             const content   = tweet.content || 'No content';
             const rawDate   = tweet.metadata?.created_at || tweet.created_at;
             const createdAt = rawDate ? new Date(rawDate).toLocaleString('en-IN', {
                 timeZone: 'Asia/Kolkata', weekday: 'short', year: 'numeric',
                 month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
             }) : 'Unknown Date';
+            const relTime = timeAgo(rawDate);
+            const srcLabel = (tweet.source || '').includes('twitter') ? 'Twitter' : 'News';
+            const srcColor = (tweet.source || '').includes('twitter') ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600';
             const retweetCount = tweet.metadata?.public_metrics?.retweet_count || tweet.retweet_count || 0;
             const likeCount    = tweet.metadata?.public_metrics?.like_count    || tweet.like_count    || 0;
             const replyCount   = tweet.metadata?.public_metrics?.reply_count   || tweet.reply_count   || 0;
@@ -675,15 +806,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const sentimentIcon = tweet.sentiment === 'positive' ? '🟢' : tweet.sentiment === 'negative' ? '🔴' : '🟡';
 
             return `
-                <div class="bg-white rounded-lg shadow-sm p-4 mb-3 border border-gray-100 hover:shadow-md transition-shadow">
+                <div class="bg-white rounded-lg shadow-sm p-4 mb-3 hover:shadow-md transition-shadow ${isLatest ? 'ring-2 ring-blue-500 ring-offset-1' : 'border border-gray-100'}" style="${isLatest ? '' : `border-left: 4px solid ${borderColor}`}">
                     <div class="flex items-start justify-between mb-2">
                         <div class="flex items-center space-x-2">
-                            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                                <i class="fas fa-newspaper text-emerald-600 text-xs"></i>
+                            ${isLatest ? '<span class="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">LATEST</span>' : ''}
+                            <div class="w-8 h-8 rounded-full ${(tweet.source || '').includes('twitter') ? 'bg-blue-100' : 'bg-emerald-100'} flex items-center justify-center">
+                                <i class="${(tweet.source || '').includes('twitter') ? 'fab fa-twitter text-blue-400' : 'fas fa-newspaper text-emerald-600'} text-xs"></i>
                             </div>
                             <div>
                                 <p class="font-semibold text-sm text-gray-900">${username}</p>
-                                <p class="text-xs text-gray-400">${createdAt} · ${regionName}</p>
+                                <p class="text-xs text-gray-400">${relTime ? relTime + ' · ' : ''}${createdAt} · ${regionName}</p>
                             </div>
                         </div>
                         <div class="flex items-center gap-1">
@@ -696,6 +828,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="px-2 py-1 rounded-full text-xs ${categoryBadgeClass}">${tweet.category}</span>
                         <span class="px-2 py-1 rounded-full bg-blue-100 text-blue-700 text-xs">🌊 ${(tweet.hazard || 'other').charAt(0).toUpperCase() + (tweet.hazard || 'other').slice(1)}</span>
                         <span class="px-2 py-1 rounded-full text-xs ${urgencyBadgeClass}">⚡ ${(tweet.urgency || 'low').toUpperCase()}</span>
+                        <span class="px-2 py-1 rounded-full text-xs text-white" style="background-color:${borderColor}">${severity.toUpperCase()}</span>
+                        <span class="px-2 py-1 rounded-full text-xs ${srcColor}">${srcLabel}</span>
                         ${genAIBadge}
                     </div>
                     <div class="flex items-center justify-between">
