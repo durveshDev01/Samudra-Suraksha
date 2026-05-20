@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samudra Suraksha - Modern Government Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <!-- jQuery and DataTables -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            transition: all 0.3s ease;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+        }
+        
+        .gradient-blue {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
+        
+        .gradient-emerald {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        .gradient-amber {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .gradient-red {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .sidebar-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-item:hover {
+            background-color: #f3f4f6;
+            border-left: 4px solid #10b981;
+        }
+        
+        .nav-item.active {
+            background-color: #f9fafb;
+            border-left: 4px solid #10b981;
+            color: #10b981;
+        }
+
+        .custom-marker {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+        }
+        
+        .marker-flood { background-color: #10b981; }
+        .marker-oil { background-color: #ef4444; }
+        .marker-waves { background-color: #f59e0b; }
+        .marker-tsunami { background-color: #333333; }
+        .marker-other { background-color: #3b82f6; }
+        .marker-pending { background-color: #ef4444; }
+        .marker-verified { background-color: #f59e0b; }
+        .marker-storm { background-color: #10b981; }
+        .marker-erosion { background-color: #f59e0b; }
+        
+        .legend {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .btn-refresh.spinning i.fa-sync-alt {
+            animation: spin 1s linear infinite;
+        }
+
+        .dashboard-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+
+        .dashboard-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-loading-text {
+            font-size: 1rem;
+            color: #0f172a;
+            font-weight: 500;
+        }
+
+        .badge-pending { background-color: #eab308; color: #1f2937; } /* Yellow for Pending */
+        .badge-verified { background-color: #10b981; color: white; } /* Green for Verified */
+        .badge-rejected { background-color: #ef4444; color: white; } /* Red for Rejected */
+        
+        .severity-high, .severity-emergency { background-color: #ef4444; color: white; } /* Red for High/Emergency */
+        .severity-medium, .severity-minor { background-color: #f59e0b; color: white; } /* Orange for Medium/Minor */
+        .severity-low { background-color: #10b981; color: white; } /* Green for Low */
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        header .flex.items-center.space-x-4 {
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        header button {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+
+        #map, #hotspot-map, #modal-map, #coastal-map-container, #social-map {
+            height: 40vh;
+            min-height: 300px;
+            max-height: 500px;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+        }
+
+        .action-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+        }
+
+        .action-button.view {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .action-button.verify {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .action-button.reject {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .action-button.disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        table thead tr {
+            background-color: #f3f4f6;
+        }
+
+        table tbody tr {
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        table tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+
+        table th, table td {
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        #hazardPieChart, #comparisonBarChart, #sentimentChart, #hazardDistributionChart {
+            height: 150px !important;
+        }
+
+        #trendLineChart, #tweetVolumeChart {
+            height: 200px !important;
+        }
+
+        .api-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+        }
+
+        /* Coastal Info Specific Styles */
+        #coastal-table-container table {
+            width: 100%;
+        }
+
+        #coastal-table-container .dataTables_wrapper .dataTables_paginate .paginate_button {
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            border-radius: 0.5rem;
+            background-color: #f3f4f6;
+            color: #0f172a;
+        }
+
+        #coastal-table-container .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background-color: #10b981;
+            color: white;
+        }
+
+        #coastal-table-container .dataTables_wrapper .dataTables_filter input {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+        }
+
+        /* Accordion Styles */
+        .accordion-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border: none;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .accordion-button.collapsed::after {
+            content: '\25BC';
+            float: right;
+        }
+
+        .accordion-button:not(.collapsed)::after {
+            content: '\25B2';
+            float: right;
+        }
+
+        .accordion-collapse {
+            display: none;
+        }
+
+        .accordion-collapse.show {
+            display: block;
+        }
+
+        .accordion-body {
+            padding: 10px;
+            background-color: #fff;
+        }
+
+        mark.red {
+            background-color: red;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        mark.orange {
+            background-color: orange;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        mark.yellow {
+            background-color: yellow;
+            color: black;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        mark.green {
+            background-color: green;
+            color: white;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        /* ===== DARK MODE ===== */
+        html.dark, html.dark body {
+            background: #060b18 !important;
+            background-image: none !important;
+            color: #e6ecf7 !important;
+        }
+        html.dark #sidebar {
+            background: linear-gradient(180deg, #020509 0%, #060b18 100%) !important;
+            border-color: rgba(255,255,255,0.07) !important;
+        }
+        html.dark header {
+            background: rgba(6,11,24,0.92) !important;
+            backdrop-filter: blur(16px);
+            border-color: rgba(255,255,255,0.06) !important;
+        }
+        html.dark .bg-white { background-color: #111c33 !important; }
+        html.dark .bg-gray-50, html.dark .bg-gray-100 { background-color: #0b1325 !important; }
+        html.dark .bg-gradient-to-br { background-image: none !important; background-color: #060b18 !important; }
+        html.dark .text-gray-900, html.dark .text-gray-800, html.dark .text-gray-700 { color: #e2e8f4 !important; }
+        html.dark .text-gray-600, html.dark .text-gray-500 { color: #94a3b8 !important; }
+        html.dark .text-gray-400 { color: #64748b !important; }
+        html.dark .border-gray-200, html.dark .border-gray-100 { border-color: rgba(255,255,255,0.08) !important; }
+        html.dark .border-gray-300 { border-color: rgba(255,255,255,0.12) !important; }
+        html.dark .rounded-2xl, html.dark .rounded-xl, html.dark .rounded-lg {
+            background-color: #111c33;
+            border-color: rgba(255,255,255,0.06);
+        }
+        html.dark table tbody tr:nth-child(even) { background-color: rgba(255,255,255,0.03) !important; }
+        html.dark table tbody tr { border-color: rgba(255,255,255,0.06) !important; }
+        html.dark table th { background-color: rgba(255,255,255,0.04) !important; color: #94a3b8 !important; }
+        html.dark table td { color: #e6ecf7 !important; }
+        html.dark input, html.dark select, html.dark textarea {
+            background-color: rgba(255,255,255,0.07) !important;
+            color: #e6ecf7 !important;
+            border-color: rgba(255,255,255,0.14) !important;
+        }
+        html.dark .shadow, html.dark .shadow-md, html.dark .shadow-lg {
+            box-shadow: 0 4px 24px rgba(0,0,0,0.45) !important;
+        }
+        html.dark .bg-gray-200 { background-color: rgba(255,255,255,0.1) !important; }
+        html.dark .hover\:bg-gray-50:hover, html.dark .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.05) !important; }
+        html.dark #dashboardLoading { background: rgba(6,11,24,0.96) !important; }
+        html.dark mark.yellow { background-color: #854d0e; color: #fef9c3; }
+        html.dark .accordion-button { background-color: #111c33 !important; color: #e2e8f4 !important; }
+        html.dark .accordion-body { background-color: #0b1325 !important; }
+        html.dark #mobileMenuBtn { background-color: #111c33 !important; }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gov-primary': '#0f172a',
+                        'gov-secondary': '#1e293b',
+                        'gov-accent': '#10b981',
+                        'gov-success': '#3b82f6',
+                        'gov-warning': '#f59e0b',
+                        'gov-danger': '#ef4444'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'bounce-gentle': 'bounceGentle 2s infinite'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- DOMPurify — XSS sanitization for user-generated content -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js" integrity="sha512-jB0TkTBeQC9ZSkBqDhdmfTv1qdfbWpGE72yJ/01Srq6hEzZIz2xkz1e2Kk/IB0Kdo5KZCpqVFkEPyiauLLLnQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-50 via-emerald-50 to-green-50 min-h-screen">
+    
+    <!-- Dashboard Loading Overlay -->
+    <div id="dashboardLoading" class="dashboard-loading">
+        <div class="dashboard-loading-spinner"></div>
+        <div class="dashboard-loading-text">Loading Dashboard...</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 text-gov-primary sidebar-transition transform lg:translate-x-0 -translate-x-full shadow-md">
+        <div class="flex flex-col h-full">
+            <!-- Logo Section -->
+            <div class="flex items-center justify-center px-6 py-6 border-b border-gray-200">
+                <div class="text-center">
+                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center mb-2 mx-auto">
+                        <img src="logo.png" alt="Logo" class="w-6 h-6 object-contain" />
+                    </div>
+                    <h1 class="text-lg font-semibold">Samudra Suraksha</h1>
+                    <p class="text-xs text-gray-500">Government Dashboard</p>
+                </div>
+            </div>
+            
+            <!-- User Profile -->
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-medium text-sm" id="officer-name"></div>
+                        <div class="text-xs text-gray-500" id="region-display">Kerala Region</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Navigation -->
+            <nav class="flex-1 px-4 py-6 space-y-1">
+                <a href="#dashboard" onclick="showTab('dashboard')" class="nav-item active flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-tachometer-alt w-5 mr-3"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#reports" onclick="showTab('reports')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-file-alt w-5 mr-3"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="#hotspots" onclick="showTab('hotspots')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-fire w-5 mr-3"></i>
+                    <span>Hotspots & Trends</span>
+                </a>
+                <a href="#alerts" onclick="showTab('alerts')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-bell w-5 mr-3"></i>
+                    <span>Alerts</span>
+                    <span class="ml-auto bg-red-500 text-xs px-2 py-1 rounded-full" id="alerts-badge">0</span>
+                </a>
+                <a href="#social" onclick="showTab('social')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-hashtag w-5 mr-3"></i>
+                    <span>Social Media</span>
+                </a>
+                <a href="#coastalinfo" onclick="showTab('coastalinfo')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-info-circle w-5 mr-3"></i>
+                    <span>Coastal Info</span>
+                </a>
+                <a href="#settings" onclick="showTab('settings')" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-cog w-5 mr-3"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
+            <!-- Logout -->
+            <div class="px-4 pb-6 border-t border-gray-200 mt-auto">
+                <a href="#" onclick="logout()" class="flex items-center px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200 text-sm font-medium">
+                    <i class="fas fa-sign-out-alt w-5 mr-3"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+    
+    <!-- Mobile Menu Button -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 bg-white p-3 rounded-lg shadow-lg">
+        <i class="fas fa-bars text-gov-primary"></i>
+    </button>
+    
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen">
+        <!-- Header -->
+        <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 sticky top-0 z-30">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gov-primary" id="pageTitle">Regional Dashboard</h2>
+                    <p class="text-gray-600" id="pageSubtitle">Monitor coastal hazards and safety reports</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- Quick Actions -->
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openNewAlertModal()" class="px-4 py-2 bg-gov-danger text-white rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-plus mr-2"></i> New Alert
+                        </button>
+                        <button onclick="exportReports()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-download mr-2"></i> Export
+                        </button>
+                    </div>
+                    <!-- Date Picker and Refresh -->
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <button class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200" data-bs-toggle="dropdown">
+                                <i class="fas fa-calendar mr-2"></i>Today
+                            </button>
+                            <ul class="dropdown-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 hidden">
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Today</a></li>
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Yesterday</a></li>
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Last 7 days</a></li>
+                            </ul>
+                        </div>
+                        <button onclick="refreshData()" class="btn-refresh px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors duration-200">
+                            <i class="fas fa-sync-alt mr-2" id="refreshIcon"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime">11:00 PM IST, Sep 25, 2025</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Dashboard Content -->
+        <main class="p-6">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-content">
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Reports</p>
+                                <p class="text-3xl font-bold text-gov-primary mt-2" id="totalReports">0</p>
+                                <p class="text-sm text-green-600 mt-2" id="totalTrend">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span>Loading...</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 gradient-blue rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clipboard-list text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Pending Verification</p>
+                                <p class="text-3xl font-bold text-gov-primary mt-2" id="pendingReports">0</p>
+                                <p class="text-sm text-amber-600 mt-2" id="pendingUrgent">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    <span>Loading...</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 gradient-amber rounded-xl flex items-center justify-center">
+                                <i class="fas fa-clock text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Active Alerts</p>
+                                <p class="text-3xl font-bold text-gov-primary mt-2" id="activeAlerts">0</p>
+                                <p class="text-sm text-red-600 mt-2" id="alertsNew">
+                                    <i class="fas fa-bell mr-1"></i>
+                                    <span>Loading...</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 gradient-red rounded-xl flex items-center justify-center">
+                                <i class="fas fa-bell text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Hotspots Detected</p>
+                                <p class="text-3xl font-bold text-gov-primary mt-2" id="hotspotsDetected">0</p>
+                                <p class="text-sm text-emerald-600 mt-2" id="hotspotsNew">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>
+                                    <span>Loading...</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 gradient-emerald rounded-xl flex items-center justify-center">
+                                <i class="fas fa-fire text-white text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Map Section -->
+                <div class="grid grid-cols-1 gap-8 mb-8">
+                    <div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-bold text-gov-primary">Regional Hazard Map</h3>
+                                <div class="flex space-x-2" id="map-filters">
+                                    <button class="px-3 py-2 text-sm bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors active" data-filter="all">All</button>
+                                    <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" data-filter="high">High Risk</button>
+                                    <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" data-filter="verified">Verified</button>
+                                    <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" data-filter="pending">Pending</button>
+                                </div>
+                            </div>
+                            <div id="map" class="w-full rounded-xl bg-gray-100 relative"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Recent Reports Table -->
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gov-primary">Recent Reports</h3>
+                        <div class="flex items-center space-x-4">
+                            <div class="relative">
+                                <input type="text" id="search-recent-reports" placeholder="Search reports..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <div class="relative">
+                                <button class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-sans text-sm font-medium" data-bs-toggle="dropdown">
+                                    <i class="fas fa-filter mr-2"></i> Filter
+                                </button>
+                                <ul class="dropdown-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 hidden">
+                                    <li><a href="#" onclick="filterReports('all')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">All Reports</a></li>
+                                    <li><a href="#" onclick="filterReports('pending')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">Pending Only</a></li>
+                                    <li><a href="#" onclick="filterReports('verified')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">Verified Only</a></li>
+                                    <li><a href="#" onclick="filterReports('high')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">High Priority</a></li>
+                                </ul>
+                            </div>
+                            <button onclick="showTab('reports')" class="text-gov-accent hover:text-emerald-600 font-medium">View All →</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto rounded-lg">
+                        <table class="w-full table-auto">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Report ID</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Reporter</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Location</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Hazard Type</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Date</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Status</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-6">
+                        <p class="text-sm text-gray-600 font-sans" id="recentPaginationInfo"></p>
+                        <div class="flex space-x-2">
+                            <button id="recentPrevPage" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-sans text-sm font-medium">Previous</button>
+                            <button id="recentNextPage" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-sans text-sm font-medium">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Reports Tab -->
+            <div id="reports-tab" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gov-primary">Reports Management</h3>
+                        <div class="flex items-center space-x-4">
+                            <div class="relative">
+                                <input type="text" id="search-reports" placeholder="Search reports..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <div class="relative">
+                                <button class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-sans text-sm font-medium" data-bs-toggle="dropdown">
+                                    <i class="fas fa-filter mr-2"></i> Filter
+                                </button>
+                                <ul class="dropdown-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 hidden">
+                                    <li><a href="#" onclick="filterReports('all')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">All Reports</a></li>
+                                    <li><a href="#" onclick="filterReports('pending')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">Pending Only</a></li>
+                                    <li><a href="#" onclick="filterReports('verified')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">Verified Only</a></li>
+                                    <li><a href="#" onclick="filterReports('high')" class="block px-4 py-2 hover:bg-gray-100 font-sans text-sm font-medium">High Priority</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto rounded-lg">
+                        <table class="w-full table-auto">
+                            <thead>
+                                <tr class="bg-gray-50 border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Report ID</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Reporter</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Location</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Hazard Type</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Date</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Status</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700 font-sans text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reportsTableBodyFull"></tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="flex items-center justify-between mt-6">
+                        <p class="text-sm text-gray-600 font-sans" id="paginationInfo"></p>
+                        <div class="flex space-x-2">
+                            <button id="prevPage" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-sans text-sm font-medium">Previous</button>
+                            <button id="nextPage" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 font-sans text-sm font-medium">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Hotspots Tab -->
+            <div id="hotspots-tab" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+                    <div class="lg:col-span-9">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h3 class="text-xl font-bold text-gov-primary mb-4">Regional Hotspots Heatmap</h3>
+                            <div id="hotspot-map" class="w-full min-h-[600px] rounded-xl bg-gray-100"></div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-3 space-y-6">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h3 class="text-lg font-bold text-gov-primary mb-4">Top Hazard Types</h3>
+                            <canvas id="hazardPieChart" class="w-full h-64"></canvas>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h3 class="text-lg font-bold text-gov-primary mb-4">Today vs Yesterday</h3>
+                            <canvas id="comparisonBarChart" class="w-full h-64"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h3 class="text-xl font-bold text-gov-primary mb-4">7-Day Report Trends</h3>
+                    <canvas id="trendLineChart" class="w-full h-96"></canvas>
+                </div>
+            </div>
+            
+            <!-- Alerts Tab -->
+            <div id="alerts-tab" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gov-primary">Alert Management</h3>
+                        <button onclick="openNewAlertModal()" class="px-4 py-2 bg-gov-danger text-white rounded-lg hover:bg-red-600 transition-colors">
+                            <i class="fas fa-plus mr-2"></i> New Alert
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-200">
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Alert ID</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Title</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Severity</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Region</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Issued</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Status</th>
+                                    <th class="text-left py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alertsTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Social Tab -->
+            <div id="social-tab" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h3 class="text-xl font-bold text-gov-primary mb-4">Social Media Monitoring</h3>
+                    <!-- Filters -->
+                    <div class="flex flex-wrap items-center justify-between mb-6 gap-4">
+                        <div class="flex items-center space-x-4 flex-wrap gap-4">
+                            <div class="relative">
+                                <input type="text" id="twitter-search" placeholder="Search Twitter (e.g., coastal hazard)" class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <i class="fab fa-twitter absolute left-3 top-3 text-gray-400"></i>
+                            </div>
+                            <button id="twitter-search-btn" class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                                <i class="fas fa-search mr-2"></i> Search
+                            </button>
+                            <select id="hazardFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <option value="all">All Hazards</option>
+                                <option value="flood">Flood</option>
+                                <option value="tsunami">Tsunami</option>
+                                <option value="waves">Waves</option>
+                                <option value="erosion">Erosion</option>
+                                <option value="storm">Storm</option>
+                            </select>
+                            <select id="sentimentFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <option value="all">All Sentiments</option>
+                                <option value="positive">Positive</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                            <select id="regionFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <option value="all">All Regions</option>
+                                <option value="ANDAMAN AND NICOBAR">Andaman and Nicobar</option>
+                                <option value="ANDHRA PRADESH">Andhra Pradesh</option>
+                                <option value="DAMAN AND DIU">Daman and Diu</option>
+                                <option value="GOA">Goa</option>
+                                <option value="GUJARAT">Gujarat</option>
+                                <option value="KERALA">Kerala</option>
+                                <option value="KARNATAKA">Karnataka</option>
+                                <option value="LAKSHADWEEP">Lakshadweep</option>
+                                <option value="MAHARASHTRA">Maharashtra</option>
+                                <option value="ORISSA">Orissa</option>
+                                <option value="Puducherry">Puducherry</option>
+                                <option value="TAMIL NADU">Tamil Nadu</option>
+                                <option value="WEST BENGAL">West Bengal</option>
+                            </select>
+                            <select id="urgencyFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <option value="all">All Urgencies</option>
+                                <option value="high">High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <button id="refreshTweets" class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i> Refresh
+                        </button>
+                    </div>
+                    <!-- Map Section -->
+                    <div class="mb-6">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h4 class="text-lg font-bold text-gov-primary mb-4">Tweet Locations</h4>
+                            <div id="social-map" class="w-full rounded-xl bg-gray-100 relative"></div>
+                            <div class="legend">
+                                <div class="legend-item"><span class="legend-color marker-flood"></span>Flood</div>
+                                <div class="legend-item"><span class="legend-color marker-tsunami"></span>Tsunami</div>
+                                <div class="legend-item"><span class="legend-color marker-waves"></span>Waves</div>
+                                <div class="legend-item"><span class="legend-color marker-erosion"></span>Erosion</div>
+                                <div class="legend-item"><span class="legend-color marker-storm"></span>Storm</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Analytics Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h4 class="text-lg font-bold text-gov-primary mb-4">Tweet Volume (Last Hour)</h4>
+                            <canvas id="tweetVolumeChart" class="w-full"></canvas>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h4 class="text-lg font-bold text-gov-primary mb-4">Sentiment Distribution</h4>
+                            <canvas id="sentimentChart" class="w-full"></canvas>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h4 class="text-lg font-bold text-gov-primary mb-4">Hazard Type Distribution</h4>
+                            <canvas id="hazardDistributionChart" class="w-full"></canvas>
+                        </div>
+                        <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                            <h4 class="text-lg font-bold text-gov-primary mb-4">Trending Keywords</h4>
+                            <div id="trendingKeywords" class="text-sm text-gray-700"></div>
+                        </div>
+                    </div>
+                    <!-- Tweets Section -->
+                    <div id="twitter-loading" class="hidden flex justify-center items-center mb-4">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div id="tweets-container" class="space-y-4"></div>
+                </div>
+            </div>
+            
+            <!-- Coastal Info Tab -->
+            <div id="coastalinfo-tab" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gov-primary">Coastal Threat Information</h3>
+                        <div class="flex items-center space-x-4">
+                            <select id="stateSelector" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent font-sans text-sm font-medium">
+                                <option value="AllIndia">All India</option>
+                                <option value="ANDAMAN AND NICOBAR">Andaman and Nicobar</option>
+                                <option value="ANDHRA PRADESH">Andhra Pradesh</option>
+                                <option value="DAMAN AND DIU">Daman and Diu</option>
+                                <option value="GOA">Goa</option>
+                                <option value="GUJARAT">Gujarat</option>
+                                <option value="KERALA">Kerala</option>
+                                <option value="KARNATAKA">Karnataka</option>
+                                <option value="LAKSHADWEEP">Lakshadweep</option>
+                                <option value="MAHARASHTRA">Maharashtra</option>
+                                <option value="ORISSA">Orissa</option>
+                                <option value="Puducherry">Puducherry</option>
+                                <option value="TAMIL NADU">Tamil Nadu</option>
+                                <option value="WEST BENGAL">West Bengal</option>
+                            </select>
+                            <div class="flex space-x-2">
+                                <button id="showMap" class="px-3 py-2 text-sm bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">Show Map</button>
+                                <button id="showTable" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Show Table</button>
+                                <button id="showMapTable" class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">Show Map & Table</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="coastal-map-container" class="w-full rounded-xl bg-gray-100"></div>
+                    <div id="coastal-table-container" class="mt-6 overflow-x-auto hidden"></div>
+                </div>
+            </div>
+            
+            <!-- Settings Tab -->
+            <div id="settings-tab" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-xl font-bold text-gov-primary mb-4">Profile Settings</h3>
+                        <form class="space-y-4" id="profileForm">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                                <input type="text" id="profileName" value="" placeholder="Your full name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                <input type="email" id="profileEmail" value="" placeholder="Your official email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                                <input type="text" id="profileDepartment" value="" placeholder="Your department" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                                <select id="profileRegion" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                                    <option>Kerala</option>
+                                    <option>Tamil Nadu</option>
+                                    <option>Andhra Pradesh</option>
+                                    <option>Goa</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">Update Profile</button>
+                        </form>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-xl font-bold text-gov-primary mb-4">Notification Settings</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">Email Notifications</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="emailNotif" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">Push Notifications</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="pushNotif" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">SMS Alerts</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="smsNotif" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mt-6 space-y-4">
+                            <h4 class="text-lg font-bold text-gov-primary">System Settings</h4>
+                            <div class="flex items-center justify-between">
+                                <span class="text-gray-700">Dark Mode</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="darkMode" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Map Style</label>
+                                <select id="mapStyle" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                                    <option value="streets">Streets</option>
+                                    <option value="satellite">Satellite</option>
+                                    <option value="terrain">Terrain</option>
+                                </select>
+                            </div>
+                            <button id="saveSettingsBtn" class="w-full py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Report Detail Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('reportModal')">&times;</span>
+            <h2 id="modal-report-title" class="text-2xl font-bold text-gov-primary mb-4">Report Details</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Report Information</h3>
+                    <div id="modal-report-details" class="space-y-2 text-sm"></div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-2">Location Map</h3>
+                    <div id="modal-map" class="h-64 rounded-lg bg-gray-100"></div>
+                </div>
+            </div>
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">Report Description</h3>
+                <p id="modal-report-description" class="text-gray-700"></p>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-2">Attached Media</h3>
+                <div id="modal-media-badges" class="mb-2"></div>
+                <div id="modal-media-content" class="space-y-4"></div>
+            </div>
+            <div class="mt-6 flex space-x-4" id="modal-footer"></div>
+        </div>
+    </div>
+
+    <!-- New Alert Modal -->
+    <div id="newAlertModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('newAlertModal')">&times;</span>
+            <h2 class="text-2xl font-bold text-gov-primary mb-4">Create New Alert</h2>
+            <form id="newAlertForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                    <input type="text" id="alertTitle" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea id="alertDescription" rows="3" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Severity</label>
+                    <select id="alertSeverity" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                        <option value="emergency">Emergency</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                        <option value="minor">Minor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Target Region (Optional)</label>
+                    <input type="text" id="alertRegion" placeholder="e.g., Kerala Coast" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent">
+                </div>
+                <div class="flex items-center">
+                    <input type="checkbox" id="sendFCM" checked class="mr-2">
+                    <label class="text-sm text-gray-700">Send via Push Notification</label>
+                </div>
+                <div class="flex space-x-4 pt-4">
+                    <button type="button" onclick="closeModal('newAlertModal')" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">Close</button>
+                    <button type="submit" class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600">Send Alert</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script src="dashboard33.js"></script>
+    <script src="coastalinfo.js"></script>
+    <script src="social.js"></script>
+
+    <!-- Dark Mode overrides — MUST be last to win Tailwind CDN specificity -->
+    <style id="dark-mode-styles">
+        html.dark,
+        html.dark body {
+            background: #060b18 !important;
+            background-color: #060b18 !important;
+            background-image: none !important;
+            color: #e2e8f0 !important;
+        }
+        html.dark * { --tw-bg-opacity: 1; }
+        html.dark .bg-gradient-to-br,
+        html.dark .from-gray-50,
+        html.dark .via-emerald-50,
+        html.dark .to-green-50 {
+            background-image: none !important;
+            background-color: #060b18 !important;
+        }
+        html.dark #sidebar {
+            background: #0b1325 !important;
+            border-right: 1px solid rgba(255,255,255,0.07) !important;
+        }
+        html.dark header {
+            background: rgba(11,19,37,0.95) !important;
+            border-color: rgba(255,255,255,0.06) !important;
+        }
+        html.dark main { background: #060b18 !important; }
+        html.dark .bg-white { background-color: #111c33 !important; }
+        html.dark .bg-gray-50 { background-color: #0a1428 !important; }
+        html.dark .bg-gray-100 { background-color: #0f1c30 !important; }
+        html.dark .bg-gray-200 { background-color: rgba(255,255,255,0.1) !important; }
+        html.dark .rounded-2xl,
+        html.dark .rounded-xl,
+        html.dark .rounded-lg {
+            background-color: #111c33 !important;
+        }
+        html.dark .text-gray-900,
+        html.dark .text-gray-800,
+        html.dark .text-gray-700 { color: #e2e8f0 !important; }
+        html.dark .text-gray-600,
+        html.dark .text-gray-500 { color: #94a3b8 !important; }
+        html.dark .text-gray-400 { color: #64748b !important; }
+        html.dark .text-gov-primary { color: #7dd3fc !important; }
+        html.dark .border-gray-200,
+        html.dark .border-gray-100 { border-color: rgba(255,255,255,0.08) !important; }
+        html.dark .border-gray-300 { border-color: rgba(255,255,255,0.12) !important; }
+        html.dark input,
+        html.dark select,
+        html.dark textarea {
+            background-color: rgba(255,255,255,0.07) !important;
+            color: #e2e8f0 !important;
+            border-color: rgba(255,255,255,0.14) !important;
+        }
+        html.dark input::placeholder { color: #64748b !important; }
+        html.dark table thead th {
+            background-color: rgba(255,255,255,0.05) !important;
+            color: #94a3b8 !important;
+        }
+        html.dark table tbody tr { border-color: rgba(255,255,255,0.05) !important; }
+        html.dark table tbody tr:nth-child(even) { background-color: rgba(255,255,255,0.02) !important; }
+        html.dark table td { color: #e2e8f0 !important; }
+        html.dark .shadow,
+        html.dark .shadow-sm,
+        html.dark .shadow-md,
+        html.dark .shadow-lg { box-shadow: 0 4px 24px rgba(0,0,0,0.5) !important; }
+        html.dark .accordion-button { background-color: #111c33 !important; color: #e2e8f0 !important; }
+        html.dark .accordion-body { background-color: #0b1325 !important; }
+        html.dark #dashboardLoading { background: rgba(6,11,24,0.97) !important; }
+        html.dark #mobileMenuBtn { background-color: #111c33 !important; }
+        html.dark .hover\:bg-gray-50:hover,
+        html.dark .hover\:bg-gray-100:hover { background-color: rgba(255,255,255,0.05) !important; }
+        html.dark .dataTables_wrapper { color: #e2e8f0 !important; }
+        html.dark .dataTables_wrapper input,
+        html.dark .dataTables_wrapper select { background: rgba(255,255,255,0.07) !important; color: #e2e8f0 !important; }
+        html.dark mark.yellow { background-color: #854d0e !important; color: #fef9c3 !important; }
+    </style>
+</body>
+</html>

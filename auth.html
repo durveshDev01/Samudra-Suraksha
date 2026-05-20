@@ -1,0 +1,1071 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samudra Suraksha - Government Portal | INCOIS</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-blue: #1e3a8a;
+            --secondary-blue: #3b82f6;
+            --accent-orange: #f97316;
+            --success-green: #059669;
+            --text-dark: #1f2937;
+            --text-light: #6b7280;
+            --border-light: #e5e7eb;
+            --bg-light: #f8fafc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background Elements */
+        .bg-pattern {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+        }
+
+        .bg-pattern::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 5%;
+            width: 200px;
+            height: 200px;
+            border: 2px solid var(--primary-blue);
+            border-radius: 50%;
+        }
+
+        .bg-pattern::after {
+            content: '';
+            position: absolute;
+            bottom: 15%;
+            right: 10%;
+            width: 150px;
+            height: 150px;
+            border: 1px solid var(--accent-orange);
+            border-radius: 50%;
+        }
+
+        /* Header Styles */
+        .header-section {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #1e40af 100%);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 20px rgba(30, 58, 138, 0.3);
+        }
+
+        .gov-emblem {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+
+        /* Main Container */
+        .main-container {
+            padding: 4rem 0;
+            min-height: calc(100vh - 160px);
+            display: flex;
+            align-items: center;
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(20px);
+        }
+
+        .auth-tabs {
+            background: var(--bg-light);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 1.25rem 2rem;
+            font-weight: 600;
+            color: var(--text-light);
+            transition: all 0.3s ease;
+            position: relative;
+            width: 50%;
+        }
+
+        .tab-button.active {
+            color: var(--primary-blue);
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-blue);
+        }
+
+        .form-container {
+            padding: 3rem 2.5rem;
+        }
+
+        .form-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .form-subtitle {
+            color: var(--text-light);
+            text-align: center;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.75rem;
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .input-group {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            z-index: 3;
+        }
+
+        .form-control {
+            padding: 0.875rem 1rem 0.875rem 3rem;
+            border: 2px solid var(--border-light);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-control:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .form-control:focus {
+            border-color: var(--secondary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 12px rgba(0, 0, 0, 0.1);
+            outline: none;
+            transform: translateY(-2px);
+        }
+
+        .form-control.is-invalid {
+            border-color: #dc3545;
+            background: #fff1f2;
+        }
+
+        .form-control.is-valid {
+            border-color: var(--success-green);
+            background: #f0fdf4;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            z-index: 3;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 58, 138, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-green) 0%, #10b981 100%);
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+        }
+
+        .security-notice {
+            background: linear-gradient(135deg, #fef3c7 0%, #fcd34d 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            font-size: 0.9rem;
+        }
+
+        .security-notice .alert-icon {
+            color: #d97706;
+            margin-right: 0.75rem;
+        }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        .forgot-password a {
+            color: var(--primary-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        .help-section {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 2rem 1rem;
+        }
+
+        .help-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .help-link {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-light);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .help-link:hover {
+            color: var(--primary-blue);
+        }
+
+        /* Custom Popup Styles */
+        .custom-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            z-index: 1000;
+            overflow: hidden;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .custom-popup-header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .custom-popup-title {
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .custom-popup-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .custom-popup-body {
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .custom-popup-footer {
+            padding: 1rem 2rem;
+            text-align: right;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .custom-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        @keyframes slideIn {
+            from { transform: translate(-50%, -60%); opacity: 0; }
+            to { transform: translate(-50%, -50%); opacity: 1; }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--primary-blue);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: auto;
+            width: 100%;
+        }
+
+        .footer-text {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+
+        .footer-contact {
+            margin: 0.5rem 0 0 0;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .footer-contact a {
+            color: #fbbf24;
+            text-decoration: none;
+        }
+
+        .footer-contact a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Loading Animation */
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+        .btn-loading::after {
+            content: "";
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid transparent;
+            border-top: 2px solid #ffffff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Error Alert */
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.75rem;
+            }
+            
+            .form-container {
+                padding: 2rem 1.5rem;
+            }
+            
+            .help-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .gov-emblem {
+                width: 60px;
+                height: 60px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Processing...</div>
+    </div>
+
+    <!-- Background Pattern -->
+    <div class="bg-pattern"></div>
+
+    <!-- Header -->
+    <header class="header-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-12">
+                    <div class="d-flex align-items-center">
+                        
+                        <div>
+                            <h1 class="header-title mb-0">Samudra Suraksha</h1>
+                            <p class="header-subtitle mb-0">Ocean Information & Early Warning System</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-5 col-md-7">
+                    <div class="auth-card">
+                        <!-- Tabs -->
+                        <div class="auth-tabs d-flex">
+                            <button class="tab-button active" id="loginTab" onclick="switchTab('login')">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login
+                            </button>
+                            <button class="tab-button" id="registerTab" onclick="switchTab('register')">
+                                <i class="fas fa-user-plus me-2"></i>Register
+                            </button>
+                        </div>
+
+                        <!-- Error Alert -->
+                        <div id="errorAlert" class="alert alert-error" style="display: none;"></div>
+
+                        <!-- Login Form -->
+                        <div id="loginForm" class="form-container">
+                            <h2 class="form-title">Welcome Back</h2>
+                            <p class="form-subtitle">Access the government disaster management portal</p>
+
+                            <form id="authForm">
+                                <div class="form-group">
+                                    <label class="form-label">Official Email</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-envelope input-icon"></i>
+                                        <input type="email" class="form-control" name="email" 
+                                               placeholder="Enter your official email" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Department State</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-map-marker-alt input-icon"></i>
+                                        <select class="form-control" name="state" required>
+                                            <option value="">Select your state</option>
+                                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                            <option value="Goa">Goa</option>
+                                            <option value="Gujarat">Gujarat</option>
+                                            <option value="Karnataka">Karnataka</option>
+                                            <option value="Kerala">Kerala</option>
+                                            <option value="Maharashtra">Maharashtra</option>
+                                            <option value="Odisha">Odisha</option>
+                                            <option value="Tamil Nadu">Tamil Nadu</option>
+                                            <option value="West Bengal">West Bengal</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-lock input-icon"></i>
+                                        <input type="password" class="form-control" name="password" 
+                                               placeholder="Enter your password" required>
+                                        <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="security-notice">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-shield-alt alert-icon"></i>
+                                        <div>
+                                            <strong>Authorized Personnel Only</strong><br>
+                                            <small>This portal is restricted to INCOIS officials, disaster management authorities, and authorized government personnel. All access is monitored and logged.</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary" id="submitBtn">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Sign In Securely
+                                </button>
+
+                                <div class="forgot-password">
+                                    <a href="#" onclick="showForgotPassword()">Forgot Password?</a>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Registration Form -->
+                        <div id="registerForm" class="form-container" style="display: none;">
+                            <h2 class="form-title">New Registration</h2>
+                            <p class="form-subtitle">Request access to the government portal</p>
+
+                            <form id="regForm">
+                                <div class="form-group">
+                                    <label class="form-label">Department Name</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-building input-icon"></i>
+                                        <input type="text" class="form-control" name="departmentName" 
+                                               placeholder="Enter your department name" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Official Email</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-envelope input-icon"></i>
+                                        <input type="email" class="form-control" name="email" 
+                                               placeholder="Enter official email" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">State</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-map-marker-alt input-icon"></i>
+                                        <select class="form-control" name="state" required>
+                                            <option value="">Select your state</option>
+                                            <option value="Andhra Pradesh">Andhra Pradesh</option>
+                                            <option value="Goa">Goa</option>
+                                            <option value="Gujarat">Gujarat</option>
+                                            <option value="Karnataka">Karnataka</option>
+                                            <option value="Kerala">Kerala</option>
+                                            <option value="Maharashtra">Maharashtra</option>
+                                            <option value="Odisha">Odisha</option>
+                                            <option value="Tamil Nadu">Tamil Nadu</option>
+                                            <option value="West Bengal">West Bengal</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label">Password</label>
+                                    <div class="input-group">
+                                        <i class="fas fa-lock input-icon"></i>
+                                        <input type="password" class="form-control" name="password" 
+                                               placeholder="Create a strong password (min 8 chars)" required>
+                                        <button type="button" class="password-toggle" onclick="togglePassword(this)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="security-notice">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-info-circle alert-icon"></i>
+                                        <div>
+                                            <strong>Admin Approval Required</strong><br>
+                                            <small>New registrations require verification and approval by INCOIS administrators. You will receive an email confirmation once approved.</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="submit" class="btn btn-success" id="regSubmitBtn">
+                                    <i class="fas fa-user-plus me-2"></i>Submit Registration
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Help Section -->
+                    <div class="help-section">
+                        <div class="help-links">
+                            <a href="#" class="help-link" onclick="showHelpDesk()">
+                                <i class="fas fa-question-circle"></i>
+                                <span>Help Desk</span>
+                            </a>
+                            <a href="tel:+91-40-23886047" class="help-link">
+                                <i class="fas fa-phone"></i>
+                                <span>Contact Support</span>
+                            </a>
+                            <a href="mailto:incois@incois.gov.in" class="help-link">
+                                <i class="fas fa-envelope"></i>
+                                <span>Email Support</span>
+                            </a>
+                        </div>
+                        <p class="text-muted small">
+                            © 2025 INCOIS | Indian National Centre for Ocean Information Services
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="footer-text">Developed and Maintained by INCOIS</p>
+        <p class="footer-contact">
+            For technical support, contact: <a href="mailto:support@incois.gov.in">support@incois.gov.in</a> | 
+            <a href="tel:+91-40-23886047">+91-40-23886047</a>
+        </p>
+    </footer>
+
+    <!-- Custom Popup Container -->
+    <div id="customPopup" class="custom-popup" style="display: none;">
+        <div class="custom-popup-header">
+            <h5 class="custom-popup-title"></h5>
+            <button class="custom-popup-close" onclick="closePopup()">&times;</button>
+        </div>
+        <div class="custom-popup-body"></div>
+        <div class="custom-popup-footer">
+            <button class="btn btn-secondary" onclick="closePopup()">Close</button>
+        </div>
+    </div>
+    <div id="customPopupOverlay" class="custom-popup-overlay" style="display: none;"></div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const supabase = window.supabase.createClient(
+                'https://mnejfugdushmrwzocxlx.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1uZWpmdWdkdXNobXJ3em9jeGx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5Mjg1ODMsImV4cCI6MjA3MzUwNDU4M30.XsAaOz53omvyBB9yPBLuTjmSYBrY4GBinqKbYPrup8w',
+                { auth: { debug: true } }
+            );
+
+            // Check auth status on page load
+            async function checkAuthStatus() {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    const { data: metadata, error: metadataError } = await supabase
+                        .from('users_metadata')
+                        .select('role')
+                        .eq('id', session.user.id)
+                        .maybeSingle();
+                    if (metadataError) {
+                        console.error('Error fetching metadata on init:', metadataError);
+                        return;
+                    }
+                    if (metadata && metadata.role === 'gov_portal') {
+                        window.location.href = 'samudradashboard.html';
+                    }
+                }
+            }
+            checkAuthStatus();
+
+            // Tab switching
+            window.switchTab = function(tabName) {
+                const loginTab = document.getElementById('loginTab');
+                const registerTab = document.getElementById('registerTab');
+                const loginForm = document.getElementById('loginForm');
+                const registerForm = document.getElementById('registerForm');
+
+                if (tabName === 'login') {
+                    loginTab.classList.add('active');
+                    registerTab.classList.remove('active');
+                    loginForm.style.display = 'block';
+                    registerForm.style.display = 'none';
+                } else {
+                    registerTab.classList.add('active');
+                    loginTab.classList.remove('active');
+                    registerForm.style.display = 'block';
+                    loginForm.style.display = 'none';
+                }
+            };
+
+            // Password toggle
+            window.togglePassword = function(button) {
+                const input = button.previousElementSibling;
+                const icon = button.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            };
+
+            // Show loading overlay
+            function showLoading(message = 'Processing...') {
+                const overlay = document.getElementById('loadingOverlay');
+                overlay.querySelector('.loading-text').textContent = message;
+                overlay.style.display = 'flex';
+            }
+
+            // Hide loading overlay
+            function hideLoading() {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+
+            // Show error alert
+            function showError(message) {
+                const alert = document.getElementById('errorAlert');
+                alert.textContent = message;
+                alert.style.display = 'block';
+                setTimeout(() => alert.style.display = 'none', 5000);
+            }
+
+            // Show popup
+            function showPopup(title, content) {
+                const popup = document.getElementById('customPopup');
+                const overlay = document.getElementById('customPopupOverlay');
+                popup.querySelector('.custom-popup-title').textContent = title;
+                popup.querySelector('.custom-popup-body').innerHTML = content;
+                popup.style.display = 'block';
+                overlay.style.display = 'block';
+            }
+
+            // Close popup
+            window.closePopup = function() {
+                document.getElementById('customPopup').style.display = 'none';
+                document.getElementById('customPopupOverlay').style.display = 'none';
+            };
+
+            // Forgot password popup
+            window.showForgotPassword = function() {
+                showPopup('Password Recovery', `
+                    <p>For password recovery, please contact INCOIS IT Support at:</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-envelope me-2"></i>Email: support@incois.gov.in</li>
+                        <li><i class="fas fa-phone me-2"></i>Phone: +91-40-23886047</li>
+                    </ul>
+                    <p class="mt-3">Provide your official email and department details for verification.</p>
+                `);
+            };
+
+            // Help desk popup
+            window.showHelpDesk = function() {
+                showPopup('INCOIS Help Desk', `
+                    <p>Contact our support team for assistance:</p>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-envelope me-2"></i>Email: incois@incois.gov.in</li>
+                        <li><i class="fas fa-phone me-2"></i>Phone: +91-40-23886047</li>
+                        <li><i class="fas fa-globe me-2"></i>Website: <a href="http://www.incois.gov.in" target="_blank">www.incois.gov.in</a></li>
+                        <li><i class="fas fa-map-marker-alt me-2"></i>Address: Indian National Centre for Ocean Information Services, Pragathi Nagar (BO), Nizampet (SO), Hyderabad - 500090, Telangana</li>
+                    </ul>
+                `);
+            };
+
+            // Form validation
+            function validateField(field) {
+                const value = field.value.trim();
+                field.classList.remove('is-valid', 'is-invalid');
+                if (field.required && !value) {
+                    field.classList.add('is-invalid');
+                    return false;
+                }
+                if (field.name === 'email') {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value)) {
+                        field.classList.add('is-invalid');
+                        return false;
+                    }
+                }
+                if (field.name === 'password' && value.length < 8) {
+                    field.classList.add('is-invalid');
+                    return false;
+                }
+                if (field.name === 'departmentName' && value.length < 3) {
+                    field.classList.add('is-invalid');
+                    return false;
+                }
+                if (field.name === 'state' && value === '') {
+                    field.classList.add('is-invalid');
+                    return false;
+                }
+                field.classList.add('is-valid');
+                return true;
+            }
+
+            function validateForm(form) {
+                const inputs = form.querySelectorAll('input, select');
+                let isValid = true;
+                inputs.forEach(input => {
+                    if (!validateField(input)) isValid = false;
+                });
+                return isValid;
+            }
+
+            // Form submission
+            ['authForm', 'regForm'].forEach(formId => {
+                const form = document.getElementById(formId);
+                if (!form) {
+                    console.error(`Form with ID ${formId} not found`);
+                    return;
+                }
+
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const button = this.querySelector('button[type="submit"]');
+                    const originalText = button.innerHTML;
+                    button.classList.add('btn-loading');
+                    button.disabled = true;
+                    showLoading(formId === 'authForm' ? 'Logging you in...' : 'Registering...');
+
+                    if (!validateForm(this)) {
+                        button.classList.remove('btn-loading');
+                        button.disabled = false;
+                        hideLoading();
+                        showError('Please fill all required fields correctly.');
+                        return;
+                    }
+
+                    const formData = new FormData(this);
+                    const email = formData.get('email');
+                    const password = formData.get('password');
+                    const state = formData.get('state');
+                    const departmentName = formData.get('departmentName');
+
+                    try {
+                        if (formId === 'authForm') {
+                            console.log('Attempting login for email:', email);
+                            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                            if (error) throw new Error(`Login failed: ${error.message}`);
+                            const { user } = data;
+
+                            // Fetch user metadata
+                            console.log('Fetching metadata for user ID:', user.id);
+                            const { data: metadata, error: metadataError } = await supabase
+                                .from('users_metadata')
+                                .select('role, state, department_name')
+                                .eq('id', user.id)
+                                .maybeSingle();
+
+                            if (metadataError) {
+                                console.error('Metadata fetch error:', metadataError);
+                                throw new Error('Error fetching user metadata: ' + metadataError.message);
+                            }
+
+                            if (!metadata || metadata.role !== 'gov_portal') {
+                                console.log('Invalid role or no metadata:', metadata ? metadata.role : 'No metadata');
+                                await supabase.auth.signOut();
+                                throw new Error('This account is not authorized for the government portal. Government access required.');
+                            }
+
+                            // Store user data
+                            localStorage.setItem('samudra_suraksha_user', JSON.stringify({
+                                email: user.email,
+                                state: metadata.state || state,
+                                department_name: metadata.department_name,
+                                role: metadata.role,
+                                loginTime: new Date().getTime()
+                            }));
+
+                            // Verify dashboard accessibility
+                            try {
+                                console.log('Checking dashboard accessibility');
+                                const dashboardResponse = await fetch('samudradashboard.html', { method: 'HEAD' });
+                                if (!dashboardResponse.ok) {
+                                    console.error('Dashboard access failed:', dashboardResponse.status, dashboardResponse.statusText);
+                                    throw new Error('Unable to access the dashboard. Please contact support.');
+                                }
+                            } catch (fetchError) {
+                                console.error('Dashboard fetch error:', fetchError);
+                                throw new Error('Dashboard page not found. Please ensure the dashboard is available or contact support.');
+                            }
+
+                            showPopup('Login Successful', 'Redirecting to Samudra Suraksha Dashboard...');
+                            setTimeout(() => {
+                                window.location.href = '/dashboard';
+                            }, 1000);
+                        } else {
+                            // Supabase Auth handles duplicate emails natively — no pre-check needed
+                            console.log('Attempting signup for email:', email);
+                            const { data, error } = await supabase.auth.signUp({
+                                email,
+                                password,
+                                options: {
+                                    data: {
+                                        role: 'gov_portal',
+                                        state,
+                                        department_name: departmentName
+                                    }
+                                }
+                            });
+
+                            if (error) {
+                                console.error('Signup error:', error);
+                                throw new Error(`Signup failed: ${error.message}`);
+                            }
+
+                            const { user } = data;
+                            if (user) {
+                                // Directly upsert metadata — works without a DB trigger
+                                const { error: insertError } = await supabase
+                                    .from('users_metadata')
+                                    .upsert({
+                                        id: user.id,
+                                        role: 'gov_portal',
+                                        state,
+                                        department_name: departmentName
+                                    }, { onConflict: 'id' });
+
+                                if (insertError) {
+                                    console.warn('Metadata insert warning (non-fatal):', insertError.message);
+                                }
+
+                                showPopup('Registration Submitted', 'Registration successful! Please check your email for verification and then log in.');
+                                form.reset();
+                                switchTab('login');
+                            } else {
+                                throw new Error('No user returned from signup.');
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Authentication error:', error.message);
+                        let errorMessage = error.message;
+                        if (error.message.includes('429')) {
+                            errorMessage = 'Too many attempts. Please wait 30 seconds and try again.';
+                        } else if (error.message.includes('Email not confirmed')) {
+                            errorMessage = 'Please verify your email before logging in.';
+                        }
+                        showError(errorMessage);
+                    } finally {
+                        button.classList.remove('btn-loading');
+                        button.disabled = false;
+                        hideLoading();
+                    }
+                });
+            });
+
+            // Form validation on input
+            const inputs = document.querySelectorAll('input, select');
+            inputs.forEach(input => {
+                input.addEventListener('blur', validateField);
+                input.addEventListener('input', () => input.classList.remove('is-valid', 'is-invalid'));
+            });
+        });
+    </script>
+</body>
+</html>

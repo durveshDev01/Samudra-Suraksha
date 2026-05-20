@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Samudra Suraksha - Social Media Monitoring</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet MarkerCluster CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .glassmorphism {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            transition: all 0.3s ease;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+        }
+        
+        .gradient-blue {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+        }
+        
+        .gradient-emerald {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        }
+        
+        .gradient-amber {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .gradient-red {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s ease-in-out infinite;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .sidebar-transition {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .nav-item:hover {
+            background: rgba(243, 244, 246, 1);
+            border-left: 4px solid #10b981;
+        }
+        
+        .nav-item.active {
+            background: rgba(249, 250, 251, 1);
+            border-left: 4px solid #10b981;
+            color: #10b981;
+        }
+
+        .custom-marker {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.2);
+        }
+        
+        .marker-flood { background-color: #10b981; }
+        .marker-tsunami { background-color: #333333; }
+        .marker-waves { background-color: #f59e0b; }
+        .marker-storm { background-color: #ef4444; }
+        .marker-erosion { background-color: #3b82f6; }
+        .marker-pending { background-color: #ef4444; }
+        .marker-verified { background-color: #f59e0b; }
+        
+        .legend {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+            font-size: 11px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .btn-refresh.spinning i.fa-sync-alt {
+            animation: spin 1s linear infinite;
+        }
+
+        .dashboard-loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            flex-direction: column;
+        }
+
+        .dashboard-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-loading-text {
+            font-size: 1rem;
+            color: #0f172a;
+            font-weight: 500;
+        }
+
+        .badge-pending { background-color: #ef4444; color: white; }
+        .badge-verified { background-color: #f59e0b; color: white; }
+        .badge-rejected { background-color: #10b981; color: white; }
+        
+        .severity-high, .severity-emergency { background-color: #10b981; color: white; }
+        .severity-medium, .severity-minor { background-color: #3b82f6; color: white; }
+        .severity-low { background-color: #ef4444; color: white; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        header .flex.items-center.space-x-4 {
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        header button {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+        }
+
+        #social-map {
+            height: 40vh;
+            min-height: 300px;
+            max-height: 500px;
+            border-radius: 0.75rem;
+        }
+
+        .action-button {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .action-button:hover {
+            transform: scale(1.05);
+        }
+
+        .action-button.view {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .action-button.verify {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .action-button.reject {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .action-button.disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .api-badge {
+            font-size: 0.875rem;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+        }
+
+        .sentiment-positive { color: #10b981; }
+        .sentiment-negative { color: #ef4444; }
+        .sentiment-neutral { color: #6b7280; }
+
+        .post-card {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem;
+        }
+
+        .post-image {
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        
+        /* Twitter Card Styling */
+        .twitter-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .twitter-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .twitter-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 12px;
+            object-fit: cover;
+        }
+        
+        .twitter-user-info {
+            flex: 1;
+        }
+        
+        .twitter-username {
+            font-weight: bold;
+            color: #14171a;
+            margin-right: 4px;
+        }
+        
+        .twitter-handle, .twitter-time {
+            color: #657786;
+            font-size: 14px;
+        }
+        
+        .twitter-content {
+            font-size: 16px;
+            line-height: 1.4;
+            color: #14171a;
+            margin-bottom: 12px;
+        }
+        
+        .twitter-image {
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            max-height: 300px;
+            object-fit: cover;
+        }
+        
+        .twitter-footer {
+            display: flex;
+            justify-content: space-between;
+            color: #657786;
+            font-size: 14px;
+        }
+        
+        .twitter-icon {
+            display: flex;
+            align-items: center;
+            margin-right: 18px;
+        }
+        
+        .twitter-icon i {
+            margin-right: 4px;
+        }
+        
+        /* YouTube Card Styling */
+        .youtube-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid #e1e8ed;
+        }
+        
+        .youtube-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .youtube-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 12px;
+            object-fit: cover;
+        }
+        
+        .youtube-user-info {
+            flex: 1;
+        }
+        
+        .youtube-username {
+            font-weight: bold;
+            color: #14171a;
+            margin-right: 4px;
+        }
+        
+        .youtube-time {
+            color: #657786;
+            font-size: 14px;
+        }
+        
+        .youtube-content {
+            font-size: 16px;
+            line-height: 1.4;
+            color: #14171a;
+            margin-bottom: 12px;
+        }
+        
+        .youtube-thumbnail {
+            position: relative;
+            width: 100%;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        
+        .youtube-thumbnail img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+        }
+        
+        .youtube-play-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 0, 0, 0.8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .youtube-play-button i {
+            color: white;
+            font-size: 24px;
+        }
+        
+        .youtube-footer {
+            display: flex;
+            justify-content: space-between;
+            color: #657786;
+            font-size: 14px;
+        }
+        
+        .youtube-icon {
+            display: flex;
+            align-items: center;
+            margin-right: 18px;
+        }
+        
+        .youtube-icon i {
+            margin-right: 4px;
+        }
+        
+        .post-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .sentiment-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .sentiment-positive-bg {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .sentiment-negative-bg {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .sentiment-neutral-bg {
+            background-color: #6b7280;
+            color: white;
+        }
+        
+        .urgency-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .urgency-high {
+            background-color: #ef4444;
+        }
+        
+        .hazard-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-pending {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .status-verified {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        #social-feed {
+            min-height: 500px; /* Ensure visibility */
+        }
+        
+        #platformChart, #hazardChart {
+            height: 200px !important; /* Reduce chart height to avoid scrolling */
+            max-height: 200px;
+        }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'gov-primary': '#0f172a',
+                        'gov-secondary': '#1e293b',
+                        'gov-accent': '#10b981',
+                        'gov-success': '#3b82f6',
+                        'gov-warning': '#ef4444',
+                        'gov-danger': '#f59e0b'
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'bounce-gentle': 'bounceGentle 2s infinite'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-gray-50 via-emerald-50 to-green-50 min-h-screen">
+    <!-- Dashboard Loading Overlay -->
+    <div id="dashboardLoading" class="dashboard-loading">
+        <div class="dashboard-loading-spinner"></div>
+        <div class="dashboard-loading-text">Loading Dashboard...</div>
+    </div>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-gray-200 text-gov-primary sidebar-transition transform lg:translate-x-0 -translate-x-full shadow-lg">
+        <div class="flex flex-col h-full">
+            <div class="flex items-center justify-center px-6 py-8 border-b border-gray-200">
+                <div class="text-center">
+                    <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center mb-3 mx-auto">
+                        <img src="logo.png" alt="Logo" class="w-8 h-8 object-contain" />
+                    </div>
+                    <h1 class="text-xl font-bold">Samudra Suraksha</h1>
+                    <p class="text-sm text-gray-500">Government Dashboard</p>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-sm" id="officer-name">Officer Kumar</div>
+                        <div class="text-xs text-gray-500" id="region-display">Kerala Region</div>
+                    </div>
+                </div>
+            </div>
+            <nav class="flex-1 px-4 py-4 space-y-1">
+                <a href="dashboard.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-tachometer-alt w-5 mr-3"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="reports.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-file-alt w-5 mr-3"></i>
+                    <span>Reports</span>
+                </a>
+                <a href="hotspots.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-fire w-5 mr-3"></i>
+                    <span>Hotspots & Trends</span>
+                </a>
+                <a href="alerts.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-bell w-5 mr-3"></i>
+                    <span>Alerts</span>
+                    <span class="ml-auto bg-red-500 text-xs px-2 py-1 rounded-full" id="alerts-badge">0</span>
+                </a>
+                <a href="social.html" class="nav-item active flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-hashtag w-5 mr-3"></i>
+                    <span>Social Media</span>
+                </a>
+                <a href="settings.html" class="nav-item flex items-center px-4 py-3 rounded-lg transition-all duration-200">
+                    <i class="fas fa-cog w-5 mr-3"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            <div class="px-4 pb-4">
+                <a href="#" onclick="logout()" class="flex items-center px-4 py-3 text-red-600 hover:text-red-700 hover:bg-red-100 rounded-lg transition-all duration-200">
+                    <i class="fas fa-sign-out-alt w-5 mr-3"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden hidden"></div>
+    
+    <!-- Mobile Menu Button -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 bg-white p-3 rounded-lg shadow-lg">
+        <i class="fas fa-bars text-gov-primary"></i>
+    </button>
+    
+    <!-- Main Content -->
+    <div class="lg:ml-72 min-h-screen">
+        <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-4 sticky top-0 z-30">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-gov-primary" id="pageTitle">Social Media Monitoring</h2>
+                    <p class="text-gray-600" id="pageSubtitle">Monitor social media for hazard reports</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openNewAlertModal()" class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors">
+                            <i class="fas fa-plus mr-2"></i> New Alert
+                        </button>
+                        <button onclick="exportReports()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-download mr-2"></i> Export
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <button class="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200" data-bs-toggle="dropdown">
+                                <i class="fas fa-calendar mr-2"></i>Today
+                            </button>
+                            <ul class="absolute right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 hidden">
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Today</a></li>
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Yesterday</a></li>
+                                <li><a href="#" class="block px-4 py-2 hover:bg-gray-100">Last 7 days</a></li>
+                            </ul>
+                        </div>
+                        <button onclick="refreshData()" class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors duration-200 btn-refresh">
+                            <i class="fas fa-sync-alt mr-2" id="refreshIcon"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-sm text-gray-500">
+                        <i class="fas fa-clock"></i>
+                        <span id="currentTime">12:34 PM IST, Sep 21, 2025</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <main class="p-6">
+            <div class="flex flex-wrap gap-4 mb-8">
+                <span class="api-badge bg-green-500 text-white">Twitter API: Connected</span>
+                <span class="api-badge bg-green-500 text-white">YouTube API: Connected</span>
+                <span class="api-badge bg-green-500 text-white">NLP Service: Active</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Total Mentions</p>
+                            <p class="text-3xl font-bold text-gov-primary mt-2" id="total-mentions">0</p>
+                            <p class="text-sm text-green-600 mt-2">
+                                <i class="fas fa-arrow-up mr-1"></i>
+                                <span>18% from yesterday</span>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 gradient-blue rounded-xl flex items-center justify-center">
+                            <i class="fas fa-comments text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Twitter Mentions</p>
+                            <p class="text-3xl font-bold text-gov-primary mt-2" id="twitter-mentions">0</p>
+                            <p class="text-sm text-green-600 mt-2">
+                                <i class="fas fa-hashtag mr-1"></i>
+                                <span>#KeralaFloods trending</span>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 gradient-amber rounded-xl flex items-center justify-center">
+                            <i class="fa-brands fa-x-twitter text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">YouTube Videos</p>
+                            <p class="text-3xl font-bold text-gov-primary mt-2" id="youtube-videos">0</p>
+                            <p class="text-sm text-green-600 mt-2">
+                                <i class="fas fa-video mr-1"></i>
+                                <span>5 new videos today</span>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 gradient-red rounded-xl flex items-center justify-center">
+                            <i class="fab fa-youtube text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 card-hover">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 uppercase tracking-wide">Auto Alerts</p>
+                            <p class="text-3xl font-bold text-gov-primary mt-2" id="alert-count">0</p>
+                            <p class="text-sm text-red-600 mt-2">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                <span>0 new in last hour</span>
+                            </p>
+                        </div>
+                        <div class="w-12 h-12 gradient-emerald rounded-xl flex items-center justify-center">
+                            <i class="fas fa-bell text-white text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-gov-primary">Social Media Hazard Map</h3>
+                    <div class="flex space-x-2" id="map-filters">
+                        <button class="px-3 py-2 text-sm bg-gov-accent text-white rounded-lg hover:bg-emerald-600 transition-colors active" data-filter="all">All</button>
+                        <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" data-filter="high">High Urgency</button>
+                        <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors" data-filter="verified">Verified</button>
+                    </div>
+                </div>
+                <div id="social-map" class="w-full h-[500px] rounded-xl bg-gray-100 relative"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                    <h3 class="text-xl font-bold text-gov-primary mb-4">Social Media Filters</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Platform</label>
+                            <div class="flex flex-wrap gap-2" id="platform-filters">
+                                <span class="badge bg-gov-accent text-white px-3 py-1 rounded-lg cursor-pointer platform-filter active" data-platform="all">All Platforms</span>
+                                <span class="badge bg-gray-100 text-gray-700 px-3 py-1 rounded-lg cursor-pointer platform-filter" data-platform="twitter">Twitter</span>
+                                <span class="badge bg-gray-100 text-gray-700 px-3 py-1 rounded-lg cursor-pointer platform-filter" data-platform="youtube">YouTube</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Hazard Type</label>
+                            <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent" id="hazard-type">
+                                <option value="all">All Hazards</option>
+                                <option value="flood">Flooding</option>
+                                <option value="tsunami">Tsunami</option>
+                                <option value="wave">High Waves</option>
+                                <option value="storm">Storm Surge</option>
+                                <option value="erosion">Coastal Erosion</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Sentiment & Urgency</label>
+                            <div class="flex flex-wrap gap-2" id="sentiment-filters">
+                                <span class="badge bg-gov-accent text-white px-3 py-1 rounded-lg cursor-pointer platform-filter active" data-sentiment="all">All Sentiments</span>
+                                <span class="badge bg-green-500 text-white px-3 py-1 rounded-lg cursor-pointer platform-filter" data-sentiment="positive">Positive</span>
+                                <span class="badge bg-amber-500 text-white px-3 py-1 rounded-lg cursor-pointer platform-filter" data-sentiment="neutral">Neutral</span>
+                                <span class="badge bg-red-500 text-white px-3 py-1 rounded-lg cursor-pointer platform-filter" data-sentiment="negative">Negative</span>
+                                <span class="badge bg-red-500 text-white px-3 py-1 rounded-lg cursor-pointer platform-filter" data-urgency="high">High Urgency</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Region</label>
+                            <select class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent" id="region-filter">
+                                <option selected>All Regions</option>
+                                <option>Kerala</option>
+                                <option>Tamil Nadu</option>
+                                <option>Karnataka</option>
+                                <option>Goa</option>
+                                <option>Maharashtra</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Keywords to Monitor</label>
+                        <textarea class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gov-accent focus:border-transparent" rows="2" id="monitor-keywords">flood, tsunami, high waves, coastal erosion, cyclone, storm surge, Kerala floods, Chennai rains, high tide, strong winds</textarea>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600" onclick="applyFilters()">Apply Filters</button>
+                        <button class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">Save Filter Preset</button>
+                        <button class="px-4 py-2 bg-gov-accent text-white rounded-lg hover:bg-emerald-600">Alert Settings</button>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gov-primary mb-4">Mentions by Platform</h3>
+                        <canvas id="platformChart" height="200"></canvas>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gov-primary mb-4">Hazard Type Distribution</h3>
+                        <canvas id="hazardChart" height="200"></canvas>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gov-primary mb-4">Trending Keywords</h3>
+                        <div class="flex flex-wrap gap-2" id="trending-keywords"></div>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                        <h3 class="text-lg font-bold text-gov-primary mb-4">NLP Processing Stats</h3>
+                        <div class="grid grid-cols-2 gap-4 text-center">
+                            <div>
+                                <p class="text-2xl font-bold">92%</p>
+                                <p class="text-sm text-gray-600">Accuracy</p>
+                            </div>
+                            <div>
+                                <p class="text-2xl font-bold">1.2s</p>
+                                <p class="text-sm text-gray-600">Avg. Process Time</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-gov-primary">Processed Social Media Feed</h3>
+                    <span class="text-sm text-gray-500" id="update-time">Updated 2 min ago</span>
+                </div>
+                <div id="social-feed" class="space-y-4"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+    <script>
+        // Configuration
+        const CONFIG = {
+            TWITTER_API_ENDPOINT: 'https://your-backend.com/api/twitter/search',
+            YOUTUBE_API_ENDPOINT: 'https://www.googleapis.com/youtube/v3',
+            NLP_API_ENDPOINT: 'https://your-backend.com/api/nlp/analyze',
+            REFRESH_INTERVAL: 10000 // 10 seconds
+        };
+
+        // Fake social media data (15 tweets, 15 YouTube videos)
+        const fakeSocialMediaData = [
+            // Twitter Posts
+            { id: 'tw1', platform: 'twitter', text: 'Heavy flooding in Kochi! Roads underwater near Marine Drive. #KeralaFloods', username: 'KochiCitizen', handle: '@KochiCitizen', timestamp: '2025-09-21T11:45:00Z', location: { lat: 9.97, lng: 76.28 }, hazardType: 'flood', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=Flood+Kochi', likes: 45, retweets: 23, comments: 12, avatar: 'https://via.placeholder.com/48x48.png?text=KC' },
+            { id: 'tw2', platform: 'twitter', text: 'High waves at Kovalam beach. Stay safe! #KeralaWeather', username: 'BeachWatcher', handle: '@BeachWatcher', timestamp: '2025-09-21T10:30:00Z', location: { lat: 8.39, lng: 76.97 }, hazardType: 'wave', sentiment: 'neutral', urgency: 'medium', verified: true, media: null, likes: 120, retweets: 45, comments: 18, avatar: 'https://via.placeholder.com/48x48.png?text=BW' },
+            { id: 'tw3', platform: 'twitter', text: 'Coastal erosion worsening in Alappuzha. Urgent action needed! #SaveOurCoast', username: 'EcoWarrior', handle: '@EcoWarrior', timestamp: '2025-09-21T08:00:00Z', location: { lat: 9.49, lng: 76.33 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=Erosion', likes: 89, retweets: 34, comments: 21, avatar: 'https://via.placeholder.com/48x48.png?text=EW' },
+            { id: 'tw4', platform: 'twitter', text: 'Storm surge alert for Kozhikode. Avoid coastal areas! #KeralaStorm', username: 'KozhikodeNews', handle: '@KozhikodeNews', timestamp: '2025-09-21T07:20:00Z', location: { lat: 11.25, lng: 75.78 }, hazardType: 'storm', sentiment: 'negative', urgency: 'high', verified: true, media: null, likes: 156, retweets: 78, comments: 32, avatar: 'https://via.placeholder.com/48x48.png?text=KN' },
+            { id: 'tw5', platform: 'twitter', text: 'Flood relief efforts underway in Thrissur. #KeralaFloods', username: 'ReliefOrg', handle: '@ReliefOrg', timestamp: '2025-09-21T09:00:00Z', location: { lat: 10.52, lng: 76.21 }, hazardType: 'flood', sentiment: 'positive', urgency: 'medium', verified: true, media: 'https://via.placeholder.com/500x300.png?text=Relief', likes: 234, retweets: 120, comments: 45, avatar: 'https://via.placeholder.com/48x48.png?text=RO' },
+            { id: 'tw6', platform: 'twitter', text: 'High tides reported in Varkala. Be cautious! #KeralaWeather', username: 'VarkalaLocal', handle: '@VarkalaLocal', timestamp: '2025-09-21T10:15:00Z', location: { lat: 8.73, lng: 76.71 }, hazardType: 'wave', sentiment: 'neutral', urgency: 'medium', verified: false, media: null, likes: 67, retweets: 23, comments: 8, avatar: 'https://via.placeholder.com/48x48.png?text=VL' },
+            { id: 'tw7', platform: 'twitter', text: 'Tsunami drill conducted in Kannur. Great job! #TsunamiSafety', username: 'KannurAdmin', handle: '@KannurAdmin', timestamp: '2025-09-21T08:30:00Z', location: { lat: 11.87, lng: 75.37 }, hazardType: 'tsunami', sentiment: 'positive', urgency: 'low', verified: true, media: 'https://via.placeholder.com/500x300.png?text=Drill', likes: 178, retweets: 56, comments: 23, avatar: 'https://via.placeholder.com/48x48.png?text=KA' },
+            { id: 'tw8', platform: 'twitter', text: 'Erosion hitting Cherai beach hard. #SaveCherai', username: 'CheraiResident', handle: '@CheraiResident', timestamp: '2025-09-21T11:00:00Z', location: { lat: 10.14, lng: 76.18 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: null, likes: 34, retweets: 12, comments: 5, avatar: 'https://via.placeholder.com/48x48.png?text=CR' },
+            { id: 'tw9', platform: 'twitter', text: 'Cyclone warning for Kerala coast. Stay alert! #CycloneAlert', username: 'WeatherKerala', handle: '@WeatherKerala', timestamp: '2025-09-21T12:00:00Z', location: { lat: 10.85, lng: 75.99 }, hazardType: 'storm', sentiment: 'negative', urgency: 'high', verified: true, media: null, likes: 289, retweets: 145, comments: 67, avatar: 'https://via.placeholder.com/48x48.png?text=WK' },
+            { id: 'tw10', platform: 'twitter', text: 'Flood rescue operations in Palakkad. #KeralaFloods', username: 'PalakkadNGO', handle: '@PalakkadNGO', timestamp: '2025-09-21T09:45:00Z', location: { lat: 10.77, lng: 76.65 }, hazardType: 'flood', sentiment: 'positive', urgency: 'medium', verified: true, media: 'https://via.placeholder.com/500x300.png?text=Rescue', likes: 156, retweets: 67, comments: 29, avatar: 'https://via.placeholder.com/48x48.png?text=PN' },
+            { id: 'tw11', platform: 'twitter', text: 'Strong winds in Kollam. Secure loose objects! #KeralaWeather', username: 'KollamUpdate', handle: '@KollamUpdate', timestamp: '2025-09-21T10:45:00Z', location: { lat: 8.89, lng: 76.58 }, hazardType: 'storm', sentiment: 'neutral', urgency: 'medium', verified: false, media: null, likes: 78, retweets: 23, comments: 9, avatar: 'https://via.placeholder.com/48x48.png?text=KU' },
+            { id: 'tw12', platform: 'twitter', text: 'Coastal erosion in Ponnani. Urgent measures needed! #SavePonnani', username: 'PonnaniVoice', handle: '@PonnaniVoice', timestamp: '2025-09-21T08:15:00Z', location: { lat: 10.76, lng: 75.92 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=Erosion', likes: 45, retweets: 18, comments: 7, avatar: 'https://via.placeholder.com/48x48.png?text=PV' },
+            { id: 'tw13', platform: 'twitter', text: 'Flood warning for Ernakulam. Stay safe! #KeralaFloods', username: 'ErnakulamAlert', handle: '@ErnakulamAlert', timestamp: '2025-09-21T11:30:00Z', location: { lat: 9.98, lng: 76.29 }, hazardType: 'flood', sentiment: 'negative', urgency: 'high', verified: true, media: null, likes: 201, retweets: 89, comments: 34, avatar: 'https://via.placeholder.com/48x48.png?text=EA' },
+            { id: 'tw14', platform: 'twitter', text: 'Tsunami awareness campaign in Calicut. #TsunamiSafety', username: 'CalicutNGO', handle: '@CalicutNGO', timestamp: '2025-09-21T09:30:00Z', location: { lat: 11.26, lng: 75.78 }, hazardType: 'tsunami', sentiment: 'positive', urgency: 'low', verified: true, media: 'https://via.placeholder.com/500x300.png?text=Campaign', likes: 123, retweets: 45, comments: 18, avatar: 'https://via.placeholder.com/48x48.png?text=CN' },
+            { id: 'tw15', platform: 'twitter', text: 'High waves near Fort Kochi. Avoid beaches! #KeralaWeather', username: 'FortKochiNews', handle: '@FortKochiNews', timestamp: '2025-09-21T10:00:00Z', location: { lat: 9.96, lng: 76.24 }, hazardType: 'wave', sentiment: 'negative', urgency: 'medium', verified: false, media: null, likes: 56, retweets: 19, comments: 6, avatar: 'https://via.placeholder.com/48x48.png?text=FKN' },
+            
+            // YouTube Videos
+            { id: 'yt1', platform: 'youtube', text: 'Tsunami awareness campaign in Chennai. Learn safety tips! #TsunamiSafety', username: 'ChennaiNGO', handle: 'ChennaiNGO', timestamp: '2025-09-21T09:15:00Z', location: { lat: 13.08, lng: 80.27 }, hazardType: 'tsunami', sentiment: 'positive', urgency: 'low', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+1', views: '1.2K', likes: 145, comments: 23, avatar: 'https://via.placeholder.com/48x48.png?text=CN' },
+            { id: 'yt2', platform: 'youtube', text: 'Live: Flood situation update from Kochi. #KeralaFloods', username: 'KochiNews', handle: 'KochiNews', timestamp: '2025-09-21T11:50:00Z', location: { lat: 9.97, lng: 76.28 }, hazardType: 'flood', sentiment: 'negative', urgency: 'high', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+2', views: '5.7K', likes: 345, comments: 67, avatar: 'https://via.placeholder.com/48x48.png?text=KN' },
+            { id: 'yt3', platform: 'youtube', text: 'Coastal erosion documentary: Alappuzha’s disappearing shores. #SaveOurCoast', username: 'EcoChannel', handle: 'EcoChannel', timestamp: '2025-09-21T08:45:00Z', location: { lat: 9.49, lng: 76.33 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+3', views: '3.4K', likes: 189, comments: 45, avatar: 'https://via.placeholder.com/48x48.png?text=EC' },
+            { id: 'yt4', platform: 'youtube', text: 'Storm surge safety tips for Kozhikode residents. #KeralaStorm', username: 'SafetyFirst', handle: 'SafetyFirst', timestamp: '2025-09-21T07:30:00Z', location: { lat: 11.25, lng: 75.78 }, hazardType: 'storm', sentiment: 'positive', urgency: 'medium', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+4', views: '2.8K', likes: 234, comments: 38, avatar: 'https://via.placeholder.com/48x48.png?text=SF' },
+            { id: 'yt5', platform: 'youtube', text: 'High waves alert: Varkala beach safety briefing. #KeralaWeather', username: 'VarkalaTV', handle: 'VarkalaTV', timestamp: '2025-09-21T10:20:00Z', location: { lat: 8.73, lng: 76.71 }, hazardType: 'wave', sentiment: 'neutral', urgency: 'medium', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+5', views: '1.9K', likes: 98, comments: 12, avatar: 'https://via.placeholder.com/48x48.png?text=VT' },
+            { id: 'yt6', platform: 'youtube', text: 'Flood rescue operations in Thrissur: Live coverage. #KeralaFloods', username: 'ThrissurLive', handle: 'ThrissurLive', timestamp: '2025-09-21T09:10:00Z', location: { lat: 10.52, lng: 76.21 }, hazardType: 'flood', sentiment: 'positive', urgency: 'medium', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+6', views: '8.2K', likes: 567, comments: 89, avatar: 'https://via.placeholder.com/48x48.png?text=TL' },
+            { id: 'yt7', platform: 'youtube', text: 'Tsunami preparedness guide for Kannur. #TsunamiSafety', username: 'KannurEdu', handle: 'KannurEdu', timestamp: '2025-09-21T08:40:00Z', location: { lat: 11.87, lng: 75.37 }, hazardType: 'tsunami', sentiment: 'positive', urgency: 'low', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+7', views: '4.3K', likes: 278, comments: 34, avatar: 'https://via.placeholder.com/48x48.png?text=KE' },
+            { id: 'yt8', platform: 'youtube', text: 'Erosion impact on Cherai beach: A visual report. #SaveCherai', username: 'CheraiMedia', handle: 'CheraiMedia', timestamp: '2025-09-21T11:10:00Z', location: { lat: 10.14, lng: 76.18 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+8', views: '2.5K', likes: 134, comments: 28, avatar: 'https://via.placeholder.com/48x48.png?text=CM' },
+            { id: 'yt9', platform: 'youtube', text: 'Cyclone preparation tips for Kerala coast. #CycloneAlert', username: 'WeatherChannel', handle: 'WeatherChannel', timestamp: '2025-09-21T12:10:00Z', location: { lat: 10.85, lng: 75.99 }, hazardType: 'storm', sentiment: 'neutral', urgency: 'high', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+9', views: '12.4K', likes: 876, comments: 123, avatar: 'https://via.placeholder.com/48x48.png?text=WC' },
+            { id: 'yt10', platform: 'youtube', text: 'Flood relief efforts in Palakkad: Volunteer stories. #KeralaFloods', username: 'PalakkadNGO', handle: 'PalakkadNGO', timestamp: '2025-09-21T09:50:00Z', location: { lat: 10.77, lng: 76.65 }, hazardType: 'flood', sentiment: 'positive', urgency: 'medium', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+10', views: '3.7K', likes: 245, comments: 45, avatar: 'https://via.placeholder.com/48x48.png?text=PN' },
+            { id: 'yt11', platform: 'youtube', text: 'Strong winds in Kollam: Safety measures explained. #KeralaWeather', username: 'KollamNews', handle: 'KollamNews', timestamp: '2025-09-21T10:50:00Z', location: { lat: 8.89, lng: 76.58 }, hazardType: 'storm', sentiment: 'neutral', urgency: 'medium', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+11', views: '2.1K', likes: 112, comments: 17, avatar: 'https://via.placeholder.com/48x48.png?text=KN' },
+            { id: 'yt12', platform: 'youtube', text: 'Coastal erosion in Ponnani: Community response. #SavePonnani', username: 'PonnaniTV', handle: 'PonnaniTV', timestamp: '2025-09-21T08:20:00Z', location: { lat: 10.76, lng: 75.92 }, hazardType: 'erosion', sentiment: 'negative', urgency: 'high', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+12', views: '1.8K', likes: 97, comments: 15, avatar: 'https://via.placeholder.com/48x48.png?text=PT' },
+            { id: 'yt13', platform: 'youtube', text: 'Flood update from Ernakulam: Live report. #KeralaFloods', username: 'ErnakulamMedia', handle: 'ErnakulamMedia', timestamp: '2025-09-21T11:40:00Z', location: { lat: 9.98, lng: 76.29 }, hazardType: 'flood', sentiment: 'negative', urgency: 'high', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+13', views: '6.5K', likes: 432, comments: 78, avatar: 'https://via.placeholder.com/48x48.png?text=EM' },
+            { id: 'yt14', platform: 'youtube', text: 'Tsunami safety workshop in Calicut. #TsunamiSafety', username: 'CalicutEdu', handle: 'CalicutEdu', timestamp: '2025-09-21T09:40:00Z', location: { lat: 11.26, lng: 75.78 }, hazardType: 'tsunami', sentiment: 'positive', urgency: 'low', verified: true, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+14', views: '3.2K', likes: 201, comments: 32, avatar: 'https://via.placeholder.com/48x48.png?text=CE' },
+            { id: 'yt15', platform: 'youtube', text: 'High waves near Fort Kochi: Drone footage. #KeralaWeather', username: 'FortKochiMedia', handle: 'FortKochiMedia', timestamp: '2025-09-21T10:10:00Z', location: { lat: 9.96, lng: 76.24 }, hazardType: 'wave', sentiment: 'negative', urgency: 'medium', verified: false, media: 'https://via.placeholder.com/500x300.png?text=YouTube+Thumbnail+15', views: '4.8K', likes: 287, comments: 43, avatar: 'https://via.placeholder.com/48x48.png?text=FKM' }
+        ];
+
+        // Store social media data
+        let socialMediaData = [];
+        let markerClusterGroup;
+        let socialMap;
+        let platformChart, hazardChart;
+
+        // Store current filters
+        let currentFilters = {
+            platform: 'all',
+            sentiment: 'all',
+            hazardType: 'all',
+            region: 'All Regions',
+            keywords: 'flood, tsunami, high waves, coastal erosion, cyclone, storm surge, Kerala floods, Chennai rains, high tide, strong winds',
+            urgency: 'all',
+            filter: 'all'
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSocialMap();
+            initializeCharts();
+            setupEventListeners();
+            loadInitialData();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        // Initialize map with Leaflet
+        function initializeSocialMap() {
+            const mapContainer = document.getElementById('social-map');
+            if (!mapContainer) {
+                console.error('social-map div not found');
+                return;
+            }
+            console.log('Initializing map');
+            socialMap = L.map('social-map').setView([10.5, 76.5], 7); // Kerala center
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(socialMap);
+
+            markerClusterGroup = L.markerClusterGroup();
+            socialMap.addLayer(markerClusterGroup);
+
+            const legend = L.control({ position: 'bottomright' });
+            legend.onAdd = function() {
+                const div = L.DomUtil.create('div', 'legend');
+                div.innerHTML = `
+                    <div class="legend-item"><span class="legend-color marker-flood"></span>Flooding</div>
+                    <div class="legend-item"><span class="legend-color marker-tsunami"></span>Tsunami</div>
+                    <div class="legend-item"><span class="legend-color marker-waves"></span>High Waves</div>
+                    <div class="legend-item"><span class="legend-color marker-storm"></span>Storm Surge</div>
+                    <div class="legend-item"><span class="legend-color marker-erosion"></span>Coastal Erosion</div>
+                `;
+                return div;
+            };
+            legend.addTo(socialMap);
+
+            socialMap.invalidateSize();
+        }
+
+        // Initialize charts
+        function initializeCharts() {
+            const platformCtx = document.getElementById('platformChart').getContext('2d');
+            platformChart = new Chart(platformCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Twitter', 'YouTube'],
+                    datasets: [{
+                        label: 'Mentions',
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderColor: ['#047857', '#dc2626'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#0f172a' } },
+                        x: { ticks: { color: '#0f172a' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            const hazardCtx = document.getElementById('hazardChart').getContext('2d');
+            hazardChart = new Chart(hazardCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['Flooding', 'Tsunami', 'High Waves', 'Storm Surge', 'Coastal Erosion'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: ['#10b981', '#333333', '#f59e0b', '#ef4444', '#3b82f6'],
+                        borderColor: ['#047857', '#1f1f1f', '#d97706', '#dc2626', '#1d4ed8'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { color: '#0f172a' } }
+                    }
+                }
+            });
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebarOverlay');
+            if (mobileMenuBtn && sidebar && sidebarOverlay) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    sidebar.classList.toggle('-translate-x-full');
+                    sidebarOverlay.classList.toggle('hidden');
+                });
+                sidebarOverlay.addEventListener('click', () => {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarOverlay.classList.add('hidden');
+                });
+            }
+
+            document.querySelectorAll('#map-filters button').forEach(button => {
+                button.addEventListener('click', () => {
+                    document.querySelectorAll('#map-filters button').forEach(btn => btn.classList.remove('active', 'bg-gov-accent', 'text-white'));
+                    button.classList.add('active', 'bg-gov-accent', 'text-white');
+                    currentFilters.filter = button.dataset.filter;
+                    applyFilters();
+                });
+            });
+
+            document.querySelectorAll('#platform-filters .platform-filter').forEach(filter => {
+                filter.addEventListener('click', () => {
+                    document.querySelectorAll('#platform-filters .platform-filter').forEach(f => f.classList.remove('active', 'bg-gov-accent', 'text-white'));
+                    filter.classList.add('active', 'bg-gov-accent', 'text-white');
+                    currentFilters.platform = filter.dataset.platform;
+                    applyFilters();
+                });
+            });
+
+            document.querySelectorAll('#sentiment-filters .platform-filter').forEach(filter => {
+                filter.addEventListener('click', () => {
+                    document.querySelectorAll('#sentiment-filters .platform-filter').forEach(f => f.classList.remove('active', 'bg-gov-accent', 'text-white'));
+                    filter.classList.add('active', 'bg-gov-accent', 'text-white');
+                    currentFilters.sentiment = filter.dataset.sentiment || 'all';
+                    currentFilters.urgency = filter.dataset.urgency || 'all';
+                    applyFilters();
+                });
+            });
+
+            document.getElementById('hazard-type').addEventListener('change', (e) => {
+                currentFilters.hazardType = e.target.value;
+                applyFilters();
+            });
+
+            document.getElementById('region-filter').addEventListener('change', (e) => {
+                currentFilters.region = e.target.value;
+                applyFilters();
+            });
+
+            document.getElementById('monitor-keywords').addEventListener('change', (e) => {
+                currentFilters.keywords = e.target.value;
+                applyFilters();
+            });
+        }
+
+        // Load initial data
+        function loadInitialData() {
+            console.log('Loading initial data...');
+            socialMediaData = [...fakeSocialMediaData];
+            updateSummaryCards();
+            updateMapMarkers();
+            renderSocialPosts();
+            updateCharts();
+            updateTrendingKeywords();
+            console.log('Hiding loading overlay');
+            document.getElementById('dashboardLoading').style.display = 'none';
+        }
+
+        // Update summary cards
+        function updateSummaryCards() {
+            const filteredData = filterSocialMediaData();
+            const totalMentions = filteredData.length;
+            const twitterMentions = filteredData.filter(post => post.platform === 'twitter').length;
+            const youtubeVideos = filteredData.filter(post => post.platform === 'youtube').length;
+            const alertCount = filteredData.filter(post => post.urgency === 'high').length;
+
+            document.getElementById('total-mentions').textContent = totalMentions;
+            document.getElementById('twitter-mentions').textContent = twitterMentions;
+            document.getElementById('youtube-videos').textContent = youtubeVideos;
+            document.getElementById('alert-count').textContent = alertCount;
+        }
+
+        // Update map markers
+        function updateMapMarkers() {
+            markerClusterGroup.clearLayers();
+            const filteredData = filterSocialMediaData();
+            filteredData.forEach(post => {
+                if (post.location && post.location.lat && post.location.lng) {
+                    const markerColor = `marker-${post.hazardType}`;
+                    const marker = L.marker([post.location.lat, post.location.lng], {
+                        icon: L.divIcon({
+                            className: `custom-marker ${markerColor}`,
+                            html: `<i class="fas fa-exclamation-triangle text-white"></i>`,
+                            iconSize: [28, 28]
+                        })
+                    }).bindPopup(`
+                        <div class="p-2 max-w-xs">
+                            <p class="font-bold">${post.username} (${post.platform})</p>
+                            <p>${post.text}</p>
+                            <p class="text-sm text-gray-500">${new Date(post.timestamp).toLocaleString()}</p>
+                            <p class="text-sm">Sentiment: <span class="sentiment-${post.sentiment}">${post.sentiment}</span></p>
+                            <p class="text-sm">Urgency: ${post.urgency}</p>
+                            ${post.media ? `<img src="${post.media}" class="w-full h-auto rounded mt-2" />` : ''}
+                        </div>
+                    `);
+                    markerClusterGroup.addLayer(marker);
+                } else {
+                    console.warn('Skipping post with invalid location:', post);
+                }
+            });
+        }
+
+        // Filter social media data
+        function filterSocialMediaData() {
+            const filtered = socialMediaData.filter(post => {
+                const matchesPlatform = currentFilters.platform === 'all' || post.platform === currentFilters.platform;
+                const matchesSentiment = currentFilters.sentiment === 'all' || post.sentiment === currentFilters.sentiment;
+                const matchesUrgency = currentFilters.urgency === 'all' || post.urgency === currentFilters.urgency;
+                const matchesHazard = currentFilters.hazardType === 'all' || post.hazardType === currentFilters.hazardType;
+                const matchesRegion = currentFilters.region === 'All Regions' || 
+                    (currentFilters.region === 'Kerala' && post.location.lat >= 8 && post.location.lat <= 12.5) ||
+                    (currentFilters.region === 'Tamil Nadu' && post.location.lat >= 8 && post.location.lat <= 13.5) ||
+                    (currentFilters.region === 'Karnataka' && post.location.lat >= 11.5 && post.location.lat <= 18) ||
+                    (currentFilters.region === 'Goa' && post.location.lat >= 14.8 && post.location.lat <= 15.8) ||
+                    (currentFilters.region === 'Maharashtra' && post.location.lat >= 15.5 && post.location.lat <= 20.5);
+                const keywords = currentFilters.keywords.toLowerCase().split(',').map(k => k.trim());
+                const matchesKeywords = keywords.some(keyword => post.text.toLowerCase().includes(keyword));
+                const matchesMapFilter = !currentFilters.filter || 
+                    (currentFilters.filter === 'high' && post.urgency === 'high') ||
+                    (currentFilters.filter === 'verified' && post.verified) ||
+                    (currentFilters.filter === 'all');
+                return matchesPlatform && matchesSentiment && matchesUrgency && matchesHazard && matchesRegion && matchesKeywords && matchesMapFilter;
+            });
+            return filtered;
+        }
+
+        // Render social posts
+        function renderSocialPosts() {
+            const socialFeed = document.getElementById('social-feed');
+            socialFeed.innerHTML = '';
+            const filteredData = filterSocialMediaData();
+            filteredData.forEach(post => {
+                if (post.platform === 'twitter') {
+                    socialFeed.appendChild(createTwitterCard(post));
+                } else if (post.platform === 'youtube') {
+                    socialFeed.appendChild(createYouTubeCard(post));
+                }
+            });
+        }
+
+        // Create Twitter card
+        function createTwitterCard(post) {
+            const card = document.createElement('div');
+            card.className = 'twitter-card';
+            
+            const timeAgo = getTimeAgo(post.timestamp);
+            const sentimentClass = `sentiment-${post.sentiment}-bg`;
+            
+            card.innerHTML = `
+                <div class="twitter-header">
+                    <img src="${post.avatar}" alt="${post.username}" class="twitter-avatar">
+                    <div class="twitter-user-info">
+                        <div>
+                            <span class="twitter-username">${post.username}</span>
+                            <span class="twitter-handle">${post.handle}</span>
+                            <span class="twitter-time">· ${timeAgo}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="twitter-content">
+                    ${post.text}
+                </div>
+                ${post.media ? `<img src="${post.media}" class="twitter-image">` : ''}
+                <div class="twitter-footer">
+                    <div class="twitter-icon">
+                        <i class="far fa-comment"></i>
+                        <span>${post.comments}</span>
+                    </div>
+                    <div class="twitter-icon">
+                        <i class="fas fa-retweet"></i>
+                        <span>${post.retweets}</span>
+                    </div>
+                    <div class="twitter-icon">
+                        <i class="far fa-heart"></i>
+                        <span>${post.likes}</span>
+                    </div>
+                    <div class="twitter-icon">
+                        <i class="far fa-share-square"></i>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="sentiment-badge ${sentimentClass}">${post.sentiment}</span>
+                    <span class="urgency-badge ${post.urgency === 'high' ? 'urgency-high' : ''}">${post.urgency} urgency</span>
+                    <span class="hazard-badge">${post.hazardType}</span>
+                    <span class="status-badge ${post.verified ? 'status-verified' : 'status-pending'}">${post.verified ? 'Verified' : 'Pending'}</span>
+                </div>
+                <div class="post-actions">
+                    <button class="action-button view" onclick="viewPostDetails('${post.id}')">View Details</button>
+                    ${post.verified ? '' : `
+                        <button class="action-button verify" onclick="verifyPost('${post.id}')">Verify</button>
+                        <button class="action-button reject" onclick="rejectPost('${post.id}')">Reject</button>
+                    `}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Create YouTube card
+        function createYouTubeCard(post) {
+            const card = document.createElement('div');
+            card.className = 'youtube-card';
+            
+            const timeAgo = getTimeAgo(post.timestamp);
+            const sentimentClass = `sentiment-${post.sentiment}-bg`;
+            
+            card.innerHTML = `
+                <div class="youtube-header">
+                    <img src="${post.avatar}" alt="${post.username}" class="youtube-avatar">
+                    <div class="youtube-user-info">
+                        <div>
+                            <span class="youtube-username">${post.username}</span>
+                            <span class="youtube-time">· ${timeAgo}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="youtube-content">
+                    ${post.text}
+                </div>
+                ${post.media ? `
+                <div class="youtube-thumbnail">
+                    <img src="${post.media}">
+                    <div class="youtube-play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+                ` : ''}
+                <div class="youtube-footer">
+                    <div class="youtube-icon">
+                        <i class="fas fa-eye"></i>
+                        <span>${post.views} views</span>
+                    </div>
+                    <div class="youtube-icon">
+                        <i class="fas fa-thumbs-up"></i>
+                        <span>${post.likes}</span>
+                    </div>
+                    <div class="youtube-icon">
+                        <i class="far fa-comment"></i>
+                        <span>${post.comments} comments</span>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    <span class="sentiment-badge ${sentimentClass}">${post.sentiment}</span>
+                    <span class="urgency-badge ${post.urgency === 'high' ? 'urgency-high' : ''}">${post.urgency} urgency</span>
+                    <span class="hazard-badge">${post.hazardType}</span>
+                    <span class="status-badge ${post.verified ? 'status-verified' : 'status-pending'}">${post.verified ? 'Verified' : 'Pending'}</span>
+                </div>
+                <div class="post-actions">
+                    <button class="action-button view" onclick="viewPostDetails('${post.id}')">View Details</button>
+                    ${post.verified ? '' : `
+                        <button class="action-button verify" onclick="verifyPost('${post.id}')">Verify</button>
+                        <button class="action-button reject" onclick="rejectPost('${post.id}')">Reject</button>
+                    `}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Get time ago string
+        function getTimeAgo(timestamp) {
+            const now = new Date();
+            const postTime = new Date(timestamp);
+            const diffInSeconds = Math.floor((now - postTime) / 1000);
+            
+            if (diffInSeconds < 60) {
+                return `${diffInSeconds} seconds ago`;
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+            } else {
+                const days = Math.floor(diffInSeconds / 86400);
+                return `${days} day${days !== 1 ? 's' : ''} ago`;
+            }
+        }
+
+        // Update charts
+        function updateCharts() {
+            const filteredData = filterSocialMediaData();
+            const platformCounts = {
+                twitter: filteredData.filter(post => post.platform === 'twitter').length,
+                youtube: filteredData.filter(post => post.platform === 'youtube').length
+            };
+            platformChart.data.datasets[0].data = [platformCounts.twitter, platformCounts.youtube];
+            platformChart.update();
+
+            const hazardCounts = {
+                flood: filteredData.filter(post => post.hazardType === 'flood').length,
+                tsunami: filteredData.filter(post => post.hazardType === 'tsunami').length,
+                wave: filteredData.filter(post => post.hazardType === 'wave').length,
+                storm: filteredData.filter(post => post.hazardType === 'storm').length,
+                erosion: filteredData.filter(post => post.hazardType === 'erosion').length
+            };
+            hazardChart.data.datasets[0].data = [hazardCounts.flood, hazardCounts.tsunami, hazardCounts.wave, hazardCounts.storm, hazardCounts.erosion];
+            hazardChart.update();
+        }
+
+        // Update trending keywords
+        function updateTrendingKeywords() {
+            const keywords = currentFilters.keywords.split(',').map(k => k.trim());
+            const trendingKeywords = document.getElementById('trending-keywords');
+            trendingKeywords.innerHTML = '';
+            keywords.slice(0, 5).forEach(keyword => {
+                const span = document.createElement('span');
+                span.className = 'badge bg-gray-100 text-gray-700 px-3 py-1 rounded-lg';
+                span.textContent = keyword;
+                trendingKeywords.appendChild(span);
+            });
+        }
+
+        // Apply filters
+        function applyFilters() {
+            updateSummaryCards();
+            updateMapMarkers();
+            renderSocialPosts();
+            updateCharts();
+        }
+
+        // Simulate post actions
+        function viewPostDetails(id) {
+            alert(`Viewing details for post ${id}`);
+        }
+
+        function verifyPost(id) {
+            socialMediaData = socialMediaData.map(post => post.id === id ? { ...post, verified: true } : post);
+            applyFilters();
+        }
+
+        function rejectPost(id) {
+            socialMediaData = socialMediaData.filter(post => post.id !== id);
+            applyFilters();
+        }
+
+        // Refresh data
+        function refreshData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            refreshIcon.classList.add('fa-spin');
+            setTimeout(() => {
+                refreshIcon.classList.remove('fa-spin');
+                loadInitialData();
+                document.getElementById('update-time').textContent = 'Updated just now';
+            }, 1000);
+        }
+
+        function updateCurrentTime() {
+            const currentTimeEl = document.getElementById('currentTime');
+            const now = new Date();
+            currentTimeEl.textContent = now.toLocaleString('en-IN', { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true, 
+                timeZone: 'Asia/Kolkata' 
+            }) + ', ' + now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function openNewAlertModal() {
+            alert('Opening new alert modal');
+        }
+
+        function exportReports() {
+            alert('Exporting social media reports as CSV');
+        }
+
+        function logout() {
+            alert('Logging out...');
+        }
+    </script>
+</body>
+</html>
