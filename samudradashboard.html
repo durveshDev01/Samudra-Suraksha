@@ -934,7 +934,10 @@
                     <!-- Map Section -->
                     <div class="mb-6">
                         <div class="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
-                            <h4 class="text-lg font-bold text-gov-primary mb-4">Alert Locations (by severity)</h4>
+                            <div class="flex items-center justify-between mb-4">
+                                <h4 class="text-lg font-bold text-gov-primary">Alert Locations (by severity)</h4>
+                                <span id="social-map-count" class="text-xs font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">—</span>
+                            </div>
                             <div id="social-map" class="w-full rounded-xl bg-gray-100 relative"></div>
                             <div class="legend">
                                 <div class="legend-item"><span class="legend-color legend-severity-critical"></span>Critical / Emergency</div>

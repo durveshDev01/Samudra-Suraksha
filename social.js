@@ -157,8 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setTimeout(() => socialMap.invalidateSize(), 100);
 
+    const REGION_ALIASES = {
+        'ORISSA': 'ODISHA', 'ODISHA': 'ODISHA', 'PONDICHERRY': 'PUDUCHERRY',
+        'ANDAMAN AND NICOBAR': 'ANDAMAN', 'ANDAMAN AND NICOBAR ISLANDS': 'ANDAMAN',
+        'BENGAL': 'WEST BENGAL', 'AP': 'ANDHRA PRADESH', 'TN': 'TAMIL NADU',
+        'KL': 'KERALA', 'MH': 'MAHARASHTRA', 'GJ': 'GUJARAT', 'UNKNOWN': 'INDIA'
+    };
+
     const indianLocations = {
         'ANDAMAN AND NICOBAR ISLANDS': [11.7401, 92.6586],
+        'ANDAMAN': [11.7401, 92.6586],
+        'ODISHA': [20.9517, 85.0985],
         'ANDHRA PRADESH': [15.9129, 79.7400],
         'ARUNACHAL PRADESH': [28.2180, 94.7278],
         'ASSAM': [26.2006, 92.9378],
@@ -269,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function searchTwitter(query = '(tsunami OR flood OR waves OR erosion OR storm OR cyclone OR बाढ़ OR सुनामी OR வெள்ளம் OR వరద OR വെള്ളപ്പൊക്കം OR புயல் OR తుఫాను OR കൊടുങ്കാറ്റ്) lang:en OR lang:hi OR lang:ta OR lang:te OR lang:ml', max_results = 20) {
+    async function searchTwitter(query = '(tsunami OR flood OR waves OR erosion OR storm OR cyclone OR बाढ़ OR सुनामी OR வெள்ளம் OR వరద OR വെള്ളപ്പൊക്കം OR புயல் OR తుఫాను OR കൊടുങ്കാറ്റ്) lang:en OR lang:hi OR lang:ta OR lang:te OR lang:ml', max_results = 45) {
         console.log('social.js: Searching Twitter with query:', query, 'max_results:', max_results);
         loadingSpinner.classList.remove('hidden');
         tweetsContainer.innerHTML = '';
@@ -293,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const jobUUID = data.jobUUID;
             let attempts = 0;
-            const maxAttempts = 10;
+            const maxAttempts = 18;
 
             const pollResults = async () => {
                 if (attempts >= maxAttempts) {
@@ -375,14 +384,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // ── Normalize field names from RSS backend ──────────────────
             const hazard   = t.hazard_type || t.hazard || detectHazard(t.content || '');
             const urgency  = t.urgency  || determineUrgency(t.category || '', hazard);
-            const locRegion = (t.location_region || t.location?.region || 'Unknown').toUpperCase();
-            const coords = (t.lat && t.lng)
-                ? [parseFloat(t.lat), parseFloat(t.lng)]
-                : (indianLocations[locRegion] || [20.5937, 78.9629]);
+            const locRegion = (t.location_region || t.location?.region || 'INDIA').toUpperCase();
+            const mapLoc = resolveMapCoordinates({ ...t, location_region: locRegion });
 
             const normalized = {
                 ...t,
                 id: t.id || `post-${processedTweets.length}`,
+                lat: mapLoc.coordinates[0],
+                lng: mapLoc.coordinates[1],
                 hazard,
                 urgency,
                 relevance_score: t.relevance_score,
@@ -393,9 +402,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 hashtags:     Array.isArray(t.hashtags) ? t.hashtags : [],
                 sentiment:    t.sentiment    || 'neutral',
                 url:          t.url          || '',
+                location_region: mapLoc.region,
                 location: {
-                    region: locRegion,
-                    coordinates: coords
+                    region: mapLoc.region,
+                    coordinates: mapLoc.coordinates
                 },
                 // Keep legacy metadata shape for card renderer
                 metadata: {
@@ -571,14 +581,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function resolveMapCoordinates(tweet) {
+        const lat = parseFloat(tweet.lat);
+        const lng = parseFloat(tweet.lng);
+        if (!isNaN(lat) && !isNaN(lng) && lat >= 6 && lat <= 37 && lng >= 68 && lng <= 97) {
+            let region = (tweet.location_region || tweet.location?.region || 'INDIA').toUpperCase();
+            if (REGION_ALIASES[region]) region = REGION_ALIASES[region];
+            return { coordinates: [lat, lng], region };
+        }
+
+        let locRegion = (tweet.location_region || tweet.location?.region || '').toUpperCase();
+        if (REGION_ALIASES[locRegion]) locRegion = REGION_ALIASES[locRegion];
+        if (locRegion && indianLocations[locRegion]) {
+            return { coordinates: [...indianLocations[locRegion]], region: locRegion };
+        }
+
+        const fromText = extractLocation(tweet, locRegion || null);
+        if (fromText.coordinates && fromText.coordinates[0] >= 6) {
+            return fromText;
+        }
+
+        const content = (tweet.content || '').toUpperCase();
+        for (const [alias, canonical] of Object.entries(REGION_ALIASES)) {
+            if (alias.length > 2 && content.includes(alias) && indianLocations[canonical]) {
+                return { coordinates: [...indianLocations[canonical]], region: canonical };
+            }
+        }
+        const regions = Object.keys(indianLocations).sort((a, b) => b.length - a.length);
+        const matched = regions.find(r => content.includes(r));
+        if (matched) {
+            return { coordinates: [...indianLocations[matched]], region: matched };
+        }
+
+        return { coordinates: [15.3173, 75.7139], region: locRegion || 'INDIA' };
+    }
+
     function extractLocation(tweet, extracted = null) {
-        const regions = Object.keys(indianLocations);
+        const regions = Object.keys(indianLocations).sort((a, b) => b.length - a.length);
         let content = (tweet.content || '').toUpperCase();
         if (extracted && extracted !== 'Unknown') {
-            content += ' ' + extracted.toUpperCase();
+            content += ' ' + String(extracted).toUpperCase();
         }
         if (tweet.metadata?.location) {
-            content += ' ' + tweet.metadata.location.toUpperCase();
+            content += ' ' + String(tweet.metadata.location).toUpperCase();
         }
 
         const matchedRegion = regions.find(r => content.includes(r));
@@ -597,8 +642,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return {
-            coordinates: [20.5937, 78.9629],
-            region: 'Unknown'
+            coordinates: [15.3173, 75.7139],
+            region: 'INDIA'
         };
     }
 
@@ -689,13 +734,26 @@ document.addEventListener('DOMContentLoaded', () => {
         markers.clearLayers();
         let hasMarkers = false;
         let latestMarker = null;
+        let placed = 0;
         const sorted = sortByRecency(tweets);
+        const usedPositions = new Set();
 
-        sorted.forEach(tweet => {
-            if (!tweet.location?.coordinates || !Array.isArray(tweet.location.coordinates) || tweet.location.coordinates.length !== 2) {
-                return;
+        sorted.forEach((tweet, idx) => {
+            const mapLoc = resolveMapCoordinates(tweet);
+            tweet.location = { region: mapLoc.region, coordinates: mapLoc.coordinates };
+            tweet.lat = mapLoc.coordinates[0];
+            tweet.lng = mapLoc.coordinates[1];
+
+            let lat = mapLoc.coordinates[0];
+            let lng = mapLoc.coordinates[1];
+            if (isNaN(lat) || isNaN(lng)) return;
+
+            const posKey = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+            if (usedPositions.has(posKey)) {
+                lat += ((idx % 5) - 2) * 0.015;
+                lng += ((idx % 7) - 3) * 0.015;
             }
-            const [lat, lng] = tweet.location.coordinates;
+            usedPositions.add(`${lat.toFixed(3)},${lng.toFixed(3)}`);
             const severity = getSeverityLevel(tweet);
             const color = getSeverityColor(tweet);
             const isLatest = isLatestPost(tweet, sorted);
@@ -729,16 +787,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 .addTo(markers);
             if (isLatest && !latestMarker) latestMarker = m;
             hasMarkers = true;
+            placed += 1;
         });
 
+        const mapCountEl = document.getElementById('social-map-count');
+        if (mapCountEl) {
+            mapCountEl.textContent = `${placed} of ${sorted.length} alerts on map`;
+        }
+
         if (hasMarkers) {
-            socialMap.fitBounds(markers.getBounds(), { padding: [30, 30] });
+            socialMap.fitBounds(markers.getBounds(), { padding: [30, 30], maxZoom: 8 });
             if (latestMarker) {
                 setTimeout(() => latestMarker.openPopup(), 400);
             }
         }
         socialMap.invalidateSize();
-        console.log('social.js: Updated map with', tweets.length, 'posts (severity-colored)');
+        console.log(`social.js: Placed ${placed}/${sorted.length} markers on map`);
     }
 
     function getCategoryBadgeClass(category) {

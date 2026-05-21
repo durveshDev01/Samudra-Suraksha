@@ -104,11 +104,93 @@ def _iso(v):
     except Exception: pass
     return datetime.now(timezone.utc).isoformat()
 
+# Aliases so Gemini/news text regions always resolve to map coordinates
+REGION_ALIASES = {
+    "ORISSA": "ODISHA", "ODISHA": "ODISHA", "PONDICHERRY": "PUDUCHERRY", "PUDUCHERRY": "PUDUCHERRY",
+    "ANDAMAN AND NICOBAR": "ANDAMAN", "ANDAMAN AND NICOBAR ISLANDS": "ANDAMAN",
+    "TELANGANA": "ANDHRA PRADESH", "DAMAN AND DIU": "GOA", "DIU": "GOA", "DAMAN": "GOA",
+    "BENGAL": "WEST BENGAL", "WEST BENGAL": "WEST BENGAL", "AP": "ANDHRA PRADESH",
+    "TN": "TAMIL NADU", "KL": "KERALA", "MH": "MAHARASHTRA", "GJ": "GUJARAT",
+    "UNKNOWN": "INDIA", "": "INDIA",
+}
+
+TRUSTED_NEWS_MARKERS = [
+    "the hindu", "indian express", "ndtv", "pti", "times of india", "hindustan times",
+    "deccan herald", "weather.com", "reliefweb", "floodlist", "incois", "imd",
+    "ndrf", "ndma", "business standard", "economic times", "news18", "ani ",
+]
+
+CURATED_RSS_FEEDS = {
+    "ReliefWeb India": "https://reliefweb.int/updates/rss/country/ind?format=rss",
+    "FloodList Asia": "https://floodlist.com/asia/feed",
+    "ReliefWeb Floods": "https://reliefweb.int/updates/rss?advanced-search=%28D5283%29&format=rss",
+    "Google News Coastal": "https://news.google.com/rss/search?q=India+coastal+cyclone+flood+warning+when:3d&hl=en-IN&gl=IN&ceid=IN:en",
+    "Google News INCOIS": "https://news.google.com/rss/search?q=INCOIS+OR+IMD+coastal+alert+India+when:3d&hl=en-IN&gl=IN&ceid=IN:en",
+}
+
+
 def _region(text):
     u = text.upper()
-    for s, c in COASTAL_STATES.items():
-        if s in u: return s, c
-    return "INDIA", random.choice(COASTAL_SCATTER)  # scatter along coast!
+    # Longer state names first to avoid partial matches
+    for s in sorted(COASTAL_STATES.keys(), key=len, reverse=True):
+        if s in u:
+            return s, COASTAL_STATES[s]
+    for alias, canonical in REGION_ALIASES.items():
+        if alias and len(alias) > 2 and alias in u and canonical in COASTAL_STATES:
+            return canonical, COASTAL_STATES[canonical]
+    return "INDIA", random.choice(COASTAL_SCATTER)
+
+
+def _normalize_region(reg: str, text: str = "") -> tuple:
+    """Return (canonical_region_name, (lat, lng))."""
+    r = (reg or "INDIA").upper().strip()
+    if r in REGION_ALIASES and REGION_ALIASES[r]:
+        r = REGION_ALIASES[r]
+    if r in COASTAL_STATES:
+        return r, COASTAL_STATES[r]
+    return _region(text or r)
+
+
+def _stable_jitter(seed: str, base_lat: float, base_lng: float) -> tuple:
+    """Spread markers at same location so each article remains visible on the map."""
+    h = abs(hash(seed)) % 10000
+    lat_off = ((h % 97) - 48) * 0.00035
+    lng_off = ((h // 97) % 97 - 48) * 0.00035
+    return round(base_lat + lat_off, 4), round(base_lng + lng_off, 4)
+
+
+def _resolve_coordinates(text: str, analysis: dict, art: dict) -> tuple:
+    """Always return valid India coastal (lat, lng, region) for map plotting."""
+    reg, coords = _normalize_region(analysis.get("location_region", "INDIA"), text)
+
+    if art.get("tw_lat") is not None and art.get("tw_lng") is not None:
+        try:
+            tlat, tlng = float(art["tw_lat"]), float(art["tw_lng"])
+            if 6 <= tlat <= 37 and 68 <= tlng <= 97:
+                if reg == "INDIA":
+                    reg, _ = _region(text)
+                seed = art.get("url") or art.get("title") or text[:40]
+                lat, lng = _stable_jitter(seed, tlat, tlng)
+                return lat, lng, reg
+        except (TypeError, ValueError):
+            pass
+
+    seed = art.get("url") or art.get("title") or str(uuid.uuid4())
+    lat, lng = _stable_jitter(seed, coords[0], coords[1])
+    if reg == "INDIA":
+        reg, _ = _region(text)
+    return lat, lng, reg
+
+
+def _recency_bonus(art: dict) -> float:
+    age_h = (datetime.now(timezone.utc) - _parse_date(art)).total_seconds() / 3600
+    if age_h <= 24:
+        return 3.0
+    if age_h <= 72:
+        return 2.0
+    if age_h <= 168:
+        return 1.0
+    return 0.0
 
 def _india_ok(text):
     lo = text.lower()
@@ -260,8 +342,9 @@ Text: \"{text[:600]}\""""
         r.raise_for_status()
         raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
         res = json.loads(raw.replace("```json", "").replace("```", "").strip())
-        reg = res.get("location_region", "INDIA").upper()
-        res["_coords"] = COASTAL_STATES.get(reg, random.choice(COASTAL_SCATTER))
+        reg, coords = _normalize_region(res.get("location_region", "INDIA"), text)
+        res["location_region"] = reg
+        res["_coords"] = coords
         return res
     except Exception as e:
         logger.debug(f"Gemini fail: {e}")
@@ -270,13 +353,21 @@ Text: \"{text[:600]}\""""
 
 # ── Source Fetchers ──────────────────────────────────────────────────────────
 
-def _fetch_news(query, n=10):
+def _fetch_news(query, n=15):
     arts = []
-    enc = urllib.parse.quote(query)
+    q = query.strip()
+    if "when:" not in q.lower():
+        q = f"{q} when:3d"
+    enc = urllib.parse.quote(q)
     url = f"https://news.google.com/rss/search?q={enc}&hl=en-IN&gl=IN&ceid=IN:en"
     try:
-        feed = feedparser.parse(url)
-        for e in (feed.entries or [])[:n]:
+        feed = feedparser.parse(url, agent=UA)
+        entries = list(feed.entries or [])
+        entries.sort(
+            key=lambda e: e.get("published_parsed") or e.get("updated_parsed") or (0,),
+            reverse=True,
+        )
+        for e in entries[:n]:
             title = e.get("title", "").strip()
             summ = _safe(e.get("summary", e.get("description", "")))
             src = title.rsplit(" - ", 1)[-1].strip() if " - " in title else "News"
@@ -334,12 +425,15 @@ def _fetch_twitter_gopher(query, n=15):
 
 def _fetch_rss():
     arts = []
-    feeds = {"ReliefWeb India": "https://reliefweb.int/updates/rss/country/ind?format=rss",
-             "FloodList Asia": "https://floodlist.com/asia/feed"}
-    for name, url in feeds.items():
+    for name, url in CURATED_RSS_FEEDS.items():
         try:
-            feed = feedparser.parse(url)
-            for e in (feed.entries or [])[:8]:
+            feed = feedparser.parse(url, agent=UA)
+            entries = sorted(
+                feed.entries or [],
+                key=lambda e: e.get("published_parsed") or e.get("updated_parsed") or (0,),
+                reverse=True,
+            )
+            for e in entries[:15]:
                 title = e.get("title", "").strip()
                 summ = _safe(e.get("summary", ""))
                 pp = e.get("published_parsed") or e.get("updated_parsed")
@@ -358,19 +452,23 @@ def _fetch_and_analyze(job_uuid, query, max_results):
     q_base = (query or "").strip()
 
     if q_base:
-        queries = [q_base, f"{q_base} India coastal warning", f"{q_base} INCOIS IMD alert"]
+        queries = [
+            q_base,
+            f"{q_base} India coastal warning when:2d",
+            f"{q_base} INCOIS IMD alert when:2d",
+            f"{q_base} NDRF cyclone flood when:3d",
+        ]
     else:
-        queries = SEARCH_QUERIES[:12]
+        queries = [f"{q} when:3d" if "when:" not in q else q for q in SEARCH_QUERIES[:14]]
 
     futures = []
-    # News + RSS (replaces former Reddit quota)
-    for q in queries[:8]:
-        futures.append(_executor.submit(_fetch_news, q, 12))
+    for q in queries[:12]:
+        futures.append(_executor.submit(_fetch_news, q, 18))
     futures.append(_executor.submit(_fetch_rss))
     tw_q = q_base or "(tsunami OR flood OR cyclone OR storm OR warning) India coastal"
-    futures.append(_executor.submit(_fetch_twitter_gopher, tw_q, 25))
+    futures.append(_executor.submit(_fetch_twitter_gopher, tw_q, 20))
 
-    for f in as_completed(futures, timeout=45):
+    for f in as_completed(futures, timeout=60):
         try:
             all_raw.extend(f.result(timeout=20))
         except Exception as ex:
@@ -382,15 +480,21 @@ def _fetch_and_analyze(job_uuid, query, max_results):
     for a in all_raw:
         if a.get("source") == "reddit":
             continue
-        k = a.get("title", "").lower().strip()[:80]
-        if k and k not in seen and len(k) > 10:
-            seen.add(k)
+        url_k = (a.get("url") or "").strip().lower()
+        title_k = a.get("title", "").lower().strip()[:80]
+        dedup_k = url_k or title_k
+        if dedup_k and dedup_k not in seen and len(title_k) > 10:
+            seen.add(dedup_k)
             unique.append(a)
 
     scored = []
     for a in unique:
         ft = a.get("full_text", a.get("title", ""))
         rel = _relevance_score(ft, q_base)
+        lo = ft.lower()
+        if any(t in lo for t in TRUSTED_NEWS_MARKERS):
+            rel += 1.5
+        rel += _recency_bonus(a)
         if rel < 1.5:
             continue
         if not _india_ok(ft):
@@ -404,10 +508,12 @@ def _fetch_and_analyze(job_uuid, query, max_results):
 
     news_only = [a for a in relevant if a.get("source") != "twitter"]
     twitter_pool = [a for a in relevant if a.get("source") == "twitter"]
+    news_quota = max(int(max_results * 0.65), max_results - 12)
     balanced = []
     ni, ti = 0, 0
     while len(balanced) < max_results and (ni < len(news_only) or ti < len(twitter_pool)):
-        if ni < len(news_only):
+        news_in = sum(1 for x in balanced if x.get("source") != "twitter")
+        if ni < len(news_only) and news_in < news_quota:
             balanced.append(news_only[ni])
             ni += 1
         if len(balanced) >= max_results:
@@ -415,6 +521,9 @@ def _fetch_and_analyze(job_uuid, query, max_results):
         if ti < len(twitter_pool):
             balanced.append(twitter_pool[ti])
             ti += 1
+        elif ni < len(news_only):
+            balanced.append(news_only[ni])
+            ni += 1
     for a in relevant:
         if len(balanced) >= max_results:
             break
@@ -426,14 +535,9 @@ def _fetch_and_analyze(job_uuid, query, max_results):
         ft = art.get("full_text", art.get("title", ""))
         rel = _relevance_score(ft, q_base)
         analysis = _gemini(ft) or _keyword_analyze(ft)
-        coords = analysis.pop("_coords", random.choice(COASTAL_SCATTER))
-
-        if art.get("tw_lat") and art.get("tw_lng"):
-            if analysis.get("location_region") in ("INDIA", "Unknown", ""):
-                coords = (art["tw_lat"], art["tw_lng"])
-
-        lat = coords[0] + random.uniform(-0.02, 0.02)
-        lng = coords[1] + random.uniform(-0.02, 0.02)
+        analysis.pop("_coords", None)
+        lat, lng, map_region = _resolve_coordinates(ft, analysis, art)
+        analysis["location_region"] = map_region
 
         conf = float(analysis.get("confidence", 0.5))
         if rel >= 4:
@@ -532,7 +636,7 @@ def _demo_data():
 def twitter_search():
     data = request.get_json(silent=True) or {}
     query = data.get("query", "").strip()
-    max_results = min(int(data.get("max_results", 35)), 50)
+    max_results = min(int(data.get("max_results", 45)), 50)
     job_uuid = str(uuid.uuid4())
     _jobs[job_uuid] = {"status": "pending", "results": []}
     threading.Thread(target=_fetch_and_analyze, args=(job_uuid, query, max_results), daemon=True).start()
